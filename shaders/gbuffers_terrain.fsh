@@ -2,7 +2,7 @@
 
 #define SUNRISE 23200
 #define SUNSET 12800
-#define TORCHLIGHT .4
+#define TORCHLIGHT.4
 
 uniform sampler2D texture;
 uniform sampler2D lightmap;

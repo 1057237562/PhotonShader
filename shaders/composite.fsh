@@ -188,6 +188,6 @@ void main(){
         }
     }
     //gl_FragData[0] = vec4(vec3(transparency),1.0);
-    gl_FragData[0]=color;//vec4(abs(normal),1.0);//texture2D(colortex3, texcoord.st);
+    gl_FragData[0]=vec4(vec3(angle),1.);// Problem From normals
     
 }

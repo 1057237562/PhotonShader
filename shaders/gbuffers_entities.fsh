@@ -47,9 +47,10 @@ void main(){
     entityColor.rgb*=max(lm,lightSky);
     
     gl_FragData[0]=entityColor;
-    if(worldTime<SUNSET||worldTime>SUNRISE)
-    gl_FragData[1]=vec4(normalEncode(normal),1.,dot(normalize(sunPosition),normal));
-    else
-    gl_FragData[1]=vec4(normalEncode(normal),1.,dot(normalize(moonPosition),normal));
-    gl_FragData[2]=vec4(0.,1.,1.,1.);
+    if(worldTime<SUNSET||worldTime>SUNRISE){
+        gl_FragData[1]=vec4(normalEncode(normal),1.,dot(normalize(sunPosition),normal));
+    }else{
+        gl_FragData[1]=vec4(normalEncode(normal),1.,dot(normalize(moonPosition),normal));
+    }
+    gl_FragData[2]=vec4(0.,0.,0.,1.);
 }
