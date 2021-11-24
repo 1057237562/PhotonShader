@@ -52,5 +52,5 @@ void main(){
     }else{
         gl_FragData[1]=vec4(normalEncode(normal),1.,dot(normalize(moonPosition),normal));
     }
-    gl_FragData[2]=vec4(0.,0.,0.,1.);
+    gl_FragData[2]=vec4(0.,1.,0.,0.);
 }

@@ -7,7 +7,6 @@
 uniform sampler2D texture;
 uniform sampler2D lightmap;
 uniform sampler2D depthtex1;
-uniform sampler2D colortex3;
 uniform vec3 sunPosition;
 uniform vec3 moonPosition;
 uniform int worldTime;
@@ -39,6 +38,7 @@ float isLightBlock(float id){
 
 /* DRAWBUFFERS:023 */
 void main(){
+    
     float isNight=0;
     if(12000<worldTime&&worldTime<13000){
         isNight=1.-(13000-worldTime)/1000.;
