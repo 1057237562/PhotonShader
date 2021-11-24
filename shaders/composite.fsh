@@ -30,6 +30,8 @@ uniform sampler2D gnormal;
 uniform sampler2D shadowtex1;
 uniform sampler2D colortex3;
 uniform sampler2D colortex1;
+uniform vec3 cameraPosition;
+uniform int frameCounter;
 
 uniform float viewHeight;
 uniform float viewWidth;
@@ -42,7 +44,7 @@ varying float isNight;
 
 const float sunPathRotation=-25.;
 const int shadowMapResolution=2048;
-const int noiseTextureResolution=64;
+const int noiseTextureResolution=128;
 const bool shadowHardwareFiltering=true;
 const float PI=3.14159265359;
 
@@ -151,6 +153,31 @@ float getLinearDepthOfViewCoord(vec3 viewCoord){
     return linearizeDepth(p.z*.5+.5);
 }
 
+/*
+*  @function getWave           : 绘制水面纹理
+*  @param positionInWorldCoord : 世界坐标（绝对坐标）
+*  @return                     : 纹理亮暗系数
+*/
+float getWave(vec4 positionInWorldCoord) {
+    
+    float speed1 = float(frameCounter*.3) / (noiseTextureResolution * 15);
+    vec3 coord1 = positionInWorldCoord.xyz / noiseTextureResolution;
+    coord1.x *= 3;
+    coord1.x += speed1;
+    coord1.z += speed1 * 0.2;
+    float noise1 = texture2D(noisetex, coord1.xz).x;
+    
+    float speed2 = float(frameCounter*0.3) / (noiseTextureResolution * 7);
+    vec3 coord2 = positionInWorldCoord.xyz / noiseTextureResolution;
+    coord2.x *= 0.5;
+    coord2.x -= speed2 * 0.15 + noise1 * 0.05;  // 加入第一个波浪的噪声
+    coord2.z -= speed2 * 0.7 - noise1 * 0.05;
+    float noise2 = texture2D(noisetex, coord2.xz).x;
+    
+    return noise2 * 0.6 + 0.4;
+}
+
+
 vec3 waterRayTarcing(vec3 startPoint,vec3 direction,vec3 color,float fresnel){
     const float stepBase=.025;
     vec3 testPoint=startPoint;
@@ -202,15 +229,37 @@ vec3 waterRayTarcing(vec3 startPoint,vec3 direction,vec3 color,float fresnel){
     return mix(color,hitColor.rgb,hitColor.a*fresnel);
 }
 
-vec3 waterReflection(vec3 color,vec2 uv,vec3 viewPos,float attr){
-    if(attr==0.){
-        vec3 normal=normalDecode(texture2D(colortex1,texcoord.st).gb);
-        vec3 viewRefRay=reflect(normalize(viewPos),normal);
-        float fresnel=.02+.98*pow(1.-dot(viewRefRay,normal),3.);
-        color=waterRayTarcing(viewPos+normal*(-viewPos.z/far*.2+.05),viewRefRay,color,fresnel);
-    }
+vec3 waterReflection(vec3 color,vec2 uv,vec3 viewPos,vec3 normal){
+    vec3 viewRefRay=reflect(normalize(viewPos),normal);
+    float fresnel=.02+.98*pow(1.-dot(viewRefRay,normal),3.);
+    color=waterRayTarcing(viewPos+normal*(-viewPos.z/far*.2+.05),viewRefRay,color,fresnel);
     return color;
 }
+
+vec3 drawWater(vec3 color,vec4 positionInWorldCoord,vec4 positionInViewCoord,vec3 viewPos,vec3 normal){
+    positionInWorldCoord.xyz+=cameraPosition;// 转为世界坐标（绝对坐标）
+    
+    // 波浪系数
+    float wave=getWave(positionInWorldCoord);
+    vec3 finalColor=color;
+    finalColor*=wave;// 波浪纹理
+    
+    // 透射
+    float cosine=dot(normalize(positionInViewCoord.xyz),normalize(normal));// 计算视线和法线夹角余弦值
+    cosine=clamp(abs(cosine),0,1);
+    float factor=pow(1.-cosine,4);// 透射系数
+    finalColor=mix(color,finalColor,factor);// 透射计算
+    
+    // 按照波浪对法线进行偏移
+    vec3 newNormal=normal;
+    newNormal.z+=.05*(((wave-.4)/.6)*2-1);
+    newNormal=normalize(newNormal);
+    
+    finalColor.rgb=waterReflection(finalColor.rgb,texcoord.st,viewPos,newNormal);
+    
+    return finalColor;
+}
+
 
 /* DRAWBUFFERS:01 */
 void main(){
@@ -262,8 +311,10 @@ void main(){
             }
         }
     }
+    if(attr==0.){
+        color.rgb=drawWater(color.rgb,positionInWorldCoord0,positionInViewCoord0,positionInClipCoord0.xyz,normalDecode(texture2D(colortex1,texcoord.st).gb));
+    }
     
-    color.rgb=waterReflection(color.rgb,texcoord.st,positionInClipCoord1.xyz,attr);
     //gl_FragData[0] = vec4(vec3(transparency),1.0);
     gl_FragData[0]=color;//vec4(attr,0,0,1);//vec4(normal,1.);//vec4(normalDecode(texture2D(colortex3,texcoord.st).rg),1.);// Problem From normals
     
