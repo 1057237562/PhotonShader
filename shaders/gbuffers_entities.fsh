@@ -14,42 +14,42 @@ varying vec4 texcoord;
 varying vec4 lmcoord;
 varying vec3 normal;
 
-vec2 normalEncode(vec3 n) {
-    if(n.x <= 0.1 && n.y <= 0.1){
-        return vec2(0.5);
+vec2 normalEncode(vec3 n){
+    if(n.x<=.1&&n.y<=.1){
+        return vec2(.5);
     }
-    vec2 enc = normalize(n.xy) * (sqrt(-n.z*0.5+0.5));
-    enc = enc*0.5+0.5;
+    vec2 enc=normalize(n.xy)*(sqrt(-n.z*.5+.5));
+    enc=enc*.5+.5;
     return enc;
 }
 
 /* DRAWBUFFERS:023 */
 void main(){
-    float isNight = 0;
-    if(12000<worldTime && worldTime<13000) {
-        isNight = 1.0 - (13000-worldTime) / 1000.0;
+    float isNight=0;
+    if(12000<worldTime&&worldTime<13000){
+        isNight=1.-(13000-worldTime)/1000.;
     }
-    else if(13000<=worldTime && worldTime<=23000) {
-        isNight = 1;
+    else if(13000<=worldTime&&worldTime<=23000){
+        isNight=1;
     }
-    else if(23000<worldTime) {
-        isNight = (24000-worldTime) / 1000.0;
+    else if(23000<worldTime){
+        isNight=(24000-worldTime)/1000.;
     }
-
-    float lm = lmcoord.x*0.4;
-    lm += nightVision;
-
-    float lightSky = lmcoord.y;
-    lightSky = pow(lightSky, 2);
-    lightSky *= (1-isNight*0.8);
     
-    vec4 entityColor = texture2D(texture,texcoord.st)*color;
-    entityColor.rgb *= max(lm,lightSky);
-
-    gl_FragData[0] = entityColor;
-    if(worldTime < SUNSET || worldTime > SUNRISE)
-		gl_FragData[1] = vec4(normalEncode(normal) , 1.0, dot(normalize(sunPosition),normal));
-	else
-		gl_FragData[1] = vec4(normalEncode(normal) , 1.0, dot(normalize(moonPosition),normal));
-    gl_FragData[2] = vec4(0.0,1.0,1.0,1.0);
+    float lm=lmcoord.x*.4;
+    lm+=nightVision;
+    
+    float lightSky=lmcoord.y;
+    lightSky=pow(lightSky,2);
+    lightSky*=(1-isNight*.8);
+    
+    vec4 entityColor=texture2D(texture,texcoord.st)*color;
+    entityColor.rgb*=max(lm,lightSky);
+    
+    gl_FragData[0]=entityColor;
+    if(worldTime<SUNSET||worldTime>SUNRISE)
+    gl_FragData[1]=vec4(normalEncode(normal),1.,dot(normalize(sunPosition),normal));
+    else
+    gl_FragData[1]=vec4(normalEncode(normal),1.,dot(normalize(moonPosition),normal));
+    gl_FragData[2]=vec4(0.,1.,1.,1.);
 }
