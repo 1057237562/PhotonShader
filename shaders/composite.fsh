@@ -4,7 +4,15 @@
 #define SHADOW_STRENGTH.45
 #define SUNLIGHT_INTENSITY 2
 
+#define BISEARCH(SEARCHPOINT,DIRVEC,SIGN)DIRVEC*=.5;\
+SEARCHPOINT+=DIRVEC*SIGN;\
+uv=getScreenCoordByViewCoord(SEARCHPOINT);\
+sampleDepth=linearizeDepth(texture2DLod(depthtex0,uv,0.).x);\
+testDepth=getLinearDepthOfViewCoord(SEARCHPOINT);\
+SIGN=sign(sampleDepth-testDepth);
+
 uniform mat4 gbufferProjectionInverse;
+uniform mat4 gbufferProjection;
 uniform float far;
 uniform float near;
 uniform mat4 gbufferModelViewInverse;
@@ -15,11 +23,13 @@ uniform mat4 shadowProjectionInverse;
 uniform sampler2DShadow shadow;
 uniform sampler2D depthtex0;
 uniform sampler2D depthtex1;
+uniform sampler2D gcolor;
 uniform sampler2D noisetex;
 uniform sampler2D shadowcolor1;
 uniform sampler2D gnormal;
 uniform sampler2D shadowtex1;
 uniform sampler2D colortex3;
+uniform sampler2D colortex1;
 
 uniform float viewHeight;
 uniform float viewWidth;
@@ -120,40 +130,98 @@ vec3 normalDecode(vec2 enc){
     return nn.xyz*2.+vec3(0.,0.,-1.);
 }
 
-/*
-*  @function screenDepthToLinerDepth   : 深度缓冲转线性深度
-*  @param screenDepth                  : 深度缓冲中的深度
-*  @return                             : 真实深度 -- 以格为单位
-*/
-float screenDepthToLinerDepth(float screenDepth) {
-    return 2 * near * far / ((far + near) - screenDepth * (far - near));
+vec2 getScreenCoordByViewCoord(vec3 viewCoord){
+    vec4 p=vec4(viewCoord,1.);
+    p=gbufferProjection*p;
+    p/=p.w;
+    if(p.z<-1||p.z>1)
+    return vec2(-1.);
+    p=p*.5f+.5f;
+    return p.st;
 }
 
-/*
-*  @function getUnderWaterFadeOut  : 计算水下淡出系数
-*  @param d0                       : 深度缓冲0中的原始数值
-*  @param d1                       : 深度缓冲1中的原始数值
-*  @param positionInViewCoord      : 眼坐标包不包含水面均可，因为我们将其当作视线方向向量
-*  @param normal                   : 眼坐标系下的法线
-*  @return                         : 淡出系数
-*/
-float getUnderWaterFadeOut(float d0, float d1, vec4 positionInViewCoord, vec3 normal) {
-    d0 = screenDepthToLinerDepth(d0);
-    d1 = screenDepthToLinerDepth(d1);
-    
-    float cosine = dot(normalize(positionInViewCoord.xyz), normalize(normal));
-    cosine = clamp(abs(cosine), 0, 1);
-    
-    return clamp(1.0 - (d1 - d0) * cosine * 0.1, 0, 1);
+float linearizeDepth(float depth){
+    return(2.*near)/(far+near-depth*(far-near));
 }
 
+float getLinearDepthOfViewCoord(vec3 viewCoord){
+    vec4 p=vec4(viewCoord,1.);
+    p=gbufferProjection*p;
+    p/=p.w;
+    return linearizeDepth(p.z*.5+.5);
+}
+
+vec3 waterRayTarcing(vec3 startPoint,vec3 direction,vec3 color,float fresnel){
+    const float stepBase=.025;
+    vec3 testPoint=startPoint;
+    direction*=stepBase;
+    bool hit=false;
+    vec4 hitColor=vec4(0.);
+    vec3 lastPoint=testPoint;
+    for(int i=0;i<40;i++)
+    {
+        testPoint+=direction*pow(float(i+1),1.46);
+        vec2 uv=getScreenCoordByViewCoord(testPoint);
+        if(uv.x<0.||uv.x>1.||uv.y<0.||uv.y>1.)
+        {
+            hit=true;
+            break;
+        }
+        float sampleDepth=texture2DLod(depthtex0,uv,0.).x;
+        sampleDepth=linearizeDepth(sampleDepth);
+        float testDepth=getLinearDepthOfViewCoord(testPoint);
+        if(sampleDepth<testDepth&&testDepth-sampleDepth<(1./2048.)*(1.+testDepth*200.+float(i)))
+        {
+            vec3 finalPoint=lastPoint;//finalPoint为二分搜索后的最终位置
+            float _sign=1.;
+            direction=testPoint-lastPoint;
+            BISEARCH(finalPoint,direction,_sign);
+            BISEARCH(finalPoint,direction,_sign);
+            BISEARCH(finalPoint,direction,_sign);
+            BISEARCH(finalPoint,direction,_sign);
+            uv=getScreenCoordByViewCoord(finalPoint);
+            hitColor=vec4(texture2DLod(texture,uv,0.).rgb,1.);
+            hitColor.a=clamp(1.-pow(distance(uv,vec2(.5))*2.,2.),0.,1.);
+            hit=true;
+            break;
+        }
+        lastPoint=testPoint;
+    }
+    if(!hit)
+    {
+        vec2 uv=getScreenCoordByViewCoord(lastPoint);
+        float testDepth=getLinearDepthOfViewCoord(lastPoint);
+        float sampleDepth=texture2DLod(depthtex0,uv,0.).x;
+        sampleDepth=linearizeDepth(sampleDepth);
+        if(testDepth-sampleDepth<.5)
+        {
+            hitColor=vec4(texture2DLod(gcolor,uv,0.).rgb,1.);
+            hitColor.a=clamp(1.-pow(distance(uv,vec2(.5))*2.,2.),0.,1.);
+        }
+    }
+    return mix(color,hitColor.rgb,hitColor.a*fresnel);
+}
+
+vec3 waterReflection(vec3 color,vec2 uv,vec3 viewPos,float attr){
+    if(attr==0.){
+        vec3 normal=normalDecode(texture2D(colortex1,texcoord.st).gb);
+        vec3 viewRefRay=reflect(normalize(viewPos),normal);
+        float fresnel=.02+.98*pow(1.-dot(viewRefRay,normal),3.);
+        color=waterRayTarcing(viewPos+normal*(-viewPos.z/far*.2+.05),viewRefRay,color,fresnel);
+    }
+    return color;
+}
 
 /* DRAWBUFFERS:01 */
 void main(){
+    
+    float type=texture2D(colortex3,texcoord.st).w;
+    float attr=texture2D(colortex1,texcoord.st).x;
+    
     vec3 normal=normalDecode(texture2D(gnormal,texcoord.st).rg);
     float transparency=texture2D(gnormal,texcoord.st).z;
     float angle=texture2D(gnormal,texcoord.st).a;
-    float type=texture2D(colortex3,texcoord.st).w;
+    
     if(type==1.){
         normal=normalDecode(texture2D(colortex3,texcoord.st).rg);
         angle=texture2D(colortex3,texcoord.st).b;
@@ -194,7 +262,9 @@ void main(){
             }
         }
     }
+    
+    color.rgb=waterReflection(color.rgb,texcoord.st,positionInClipCoord1.xyz,attr);
     //gl_FragData[0] = vec4(vec3(transparency),1.0);
-    gl_FragData[0]=color;//vec4(normal,1.);//vec4(normalDecode(texture2D(colortex3,texcoord.st).rg),1.);// Problem From normals
+    gl_FragData[0]=color;//vec4(attr,0,0,1);//vec4(normal,1.);//vec4(normalDecode(texture2D(colortex3,texcoord.st).rg),1.);// Problem From normals
     
 }

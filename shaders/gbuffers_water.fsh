@@ -50,7 +50,7 @@ vec2 normalEncode(vec3 n){
     return color;
 }*/
 
-/* DRAWBUFFERS:012 */
+/* DRAWBUFFERS:021 */
 
 void main() {
     vec4 positionInWorldCoord = gbufferModelViewInverse * position;   // “我的世界坐标”
@@ -83,12 +83,13 @@ void main() {
         cosine = clamp(abs(cosine), 0, 1);
         float factor = pow(1.0 - cosine, 4);    // 透射系数
         gl_FragData[0] = vec4(blockColor.rgb, factor*0.80 + 0.15);
+        gl_FragData[2]=vec4(1-attr,normalEncode(normal),1);
     }else{
         gl_FragData[0] = blockColor;
-        gl_FragData[2] = vec4(normalEncode(normal),max(0,attr-lm*0.6f),1.0);
+        gl_FragData[1] = vec4(normalEncode(normal),max(0,attr-lm*0.6f),1.0);
+        gl_FragData[2]=vec4(1-attr,normalEncode(normal),1);
     }
     
-    gl_FragData[1] = vec4(attr,0.0,0.0,0.0);
     /*
     if(fogMode == 9729)
     gl_FragData[0].rgb = mix(gl_Fog.color.rgb, gl_FragData[0].rgb, clamp((gl_Fog.end - gl_FogFragCoord) / (gl_Fog.end - gl_Fog.start), 0.0, 1.0));
