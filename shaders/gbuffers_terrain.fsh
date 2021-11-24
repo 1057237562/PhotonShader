@@ -80,5 +80,5 @@ void main(){
         gl_FragData[1]=vec4(normalEncode(normal),max(0,1.-lm),dot(normalize(moonPosition),normal));
     }
     //float dist = pow(pow(abs(positionInWorldCoord.x),2)+pow(abs(positionInWorldCoord.z),2)+pow(abs(positionInWorldCoord.y),2),1.0/3.0)/27;
-    gl_FragData[2]=vec4(matId/255,0.,0.,1.);
+    gl_FragData[2]=vec4(matId/255,0.,0.,0.);
 }

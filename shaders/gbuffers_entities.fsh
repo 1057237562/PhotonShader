@@ -23,7 +23,7 @@ vec2 normalEncode(vec3 n){
     return enc;
 }
 
-/* DRAWBUFFERS:023 */
+/* DRAWBUFFERS:03 */
 void main(){
     float isNight=0;
     if(12000<worldTime&&worldTime<13000){
@@ -48,9 +48,9 @@ void main(){
     
     gl_FragData[0]=entityColor;
     if(worldTime<SUNSET||worldTime>SUNRISE){
-        gl_FragData[1]=vec4(normalEncode(normal),1.,dot(normalize(sunPosition),normal));
+        gl_FragData[1]=vec4(normalEncode(normal),dot(normalize(sunPosition),normal),1.);//gl_FragData[1]=vec4(normalEncode(normal),1.,dot(normalize(sunPosition),normal));
     }else{
-        gl_FragData[1]=vec4(normalEncode(normal),1.,dot(normalize(moonPosition),normal));
+        gl_FragData[1]=vec4(normalEncode(normal),dot(normalize(moonPosition),normal),1.);//gl_FragData[1]=vec4(normalEncode(normal),1.,dot(normalize(moonPosition),normal));
     }
-    gl_FragData[2]=vec4(0.,1.,0.,0.);
+    
 }

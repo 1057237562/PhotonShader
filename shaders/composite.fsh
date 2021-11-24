@@ -52,12 +52,13 @@ float isLightSource(float id){
     return 0.;
 }
 
-vec4 getBloomSource(vec4 color,vec4 positionInWorldCoord,float IsNight){
+vec4 getBloomSource(vec4 color,vec4 positionInWorldCoord,float IsNight,float type){
     vec4 bloom=color;
     float id=floor(texture2D(colortex3,texcoord.st).x*255+.1);
     float brightness=dot(bloom.rgb,vec3(.2125,.7154,.0721));
-    
-    if(id==50.||id==76.){// torch
+    if(type==1.){
+        bloom.rgb*=.1;
+    }else if(id==50.||id==76.){// torch
         if(brightness<.5){
             bloom.rgb=vec3(0);
         }
@@ -152,6 +153,11 @@ void main(){
     vec3 normal=normalDecode(texture2D(gnormal,texcoord.st).rg);
     float transparency=texture2D(gnormal,texcoord.st).z;
     float angle=texture2D(gnormal,texcoord.st).a;
+    float type=texture2D(colortex3,texcoord.st).w;
+    if(type==1.){
+        normal=normalDecode(texture2D(colortex3,texcoord.st).rg);
+        angle=texture2D(colortex3,texcoord.st).b;
+    }
     
     vec4 color=texture2D(texture,texcoord.st);
     
@@ -168,13 +174,14 @@ void main(){
     vec4 positionInViewCoord1=vec4(positionInClipCoord1.xyz/positionInClipCoord1.w,1.);
     vec4 positionInWorldCoord1=gbufferModelViewInverse*(positionInViewCoord1+vec4(normal*.05*sqrt(abs(positionInViewCoord1.z)),0.));
     
-    gl_FragData[1]=getBloomSource(color,positionInWorldCoord1,isNight);//getBloomSource(color);
+    gl_FragData[1]=getBloomSource(color,positionInWorldCoord1,isNight,type);//getBloomSource(color);
     
-    if(isLightSource(floor(texture2D(colortex3,texcoord.st).x*255.f+.1))<1.){
+    if(isLightSource(floor(texture2D(colortex3,texcoord.st).x*255.f+.1))<1.||type==1.){
         
         color*=1-isNight*.4;
         
-        if(transparency>0.){
+        if(transparency>0.||type==1.){
+            transparency=max(transparency,type);
             //float underWaterFadeOut = getUnderWaterFadeOut(depth0, depth1, positionInViewCoord0, normal);
             if(angle<=.1&&extShadow==0.){
                 if(angle<=0){
@@ -188,6 +195,6 @@ void main(){
         }
     }
     //gl_FragData[0] = vec4(vec3(transparency),1.0);
-    gl_FragData[0]=color;//vec4(normal,1.);// Problem From normals
+    gl_FragData[0]=color;//vec4(normal,1.);//vec4(normalDecode(texture2D(colortex3,texcoord.st).rg),1.);// Problem From normals
     
 }
