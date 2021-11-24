@@ -6,7 +6,7 @@ uniform sampler2D lightmap;
 uniform int worldTime;
 uniform float nightVision;
 uniform mat4 gbufferModelViewInverse;
-const int noiseTextureResolution=64;
+const int noiseTextureResolution = 64;
 uniform sampler2D noisetex;
 uniform sampler2D colortex3;
 uniform int frameCounter;
@@ -19,12 +19,12 @@ varying vec3 normal;
 varying vec4 position;
 varying float attr;
 
-vec2 normalEncode(vec3 n){
-    if(n.x<=.01&&n.y<=.01){
-        return vec2(.5);
+vec2 normalEncode(vec3 n) {
+    if (n.x <= 0.01&&n.y <= 0.01) {
+        return vec2(0.5);
     }
-    vec2 enc=normalize(n.xy)*(sqrt(-n.z*.5+.5));
-    enc=enc*.5+.5;
+    vec2 enc = normalize(n.xy) * (sqrt(-n.z * 0.5 + 0.5));
+    enc = enc * 0.5 + 0.5;
     return enc;
 }
 
@@ -50,7 +50,7 @@ vec2 normalEncode(vec3 n){
     return color;
 }*/
 
-/* DRAWBUFFERS:021 */
+/* DRAWBUFFERS:0215 */
 
 void main() {
     vec4 positionInWorldCoord = gbufferModelViewInverse * position;   // “我的世界坐标”
@@ -84,6 +84,7 @@ void main() {
         float factor = pow(1.0 - cosine, 4);    // 透射系数
         gl_FragData[0] = vec4(blockColor.rgb, factor*0.80 + 0.15);
         gl_FragData[2]=vec4(1-attr,normalEncode(normal),1);
+        gl_FragData[3] = vec4(normal,1);
     }else{
         gl_FragData[0] = blockColor;
         gl_FragData[1] = vec4(normalEncode(normal),max(0,attr-lm*0.6f),1.0);
