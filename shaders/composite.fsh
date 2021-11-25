@@ -1,7 +1,7 @@
 #version 120
 
-#define SHADOW_MAP_BIAS.85
-#define SHADOW_STRENGTH.45
+#define SHADOW_MAP_BIAS 0.85
+#define SHADOW_STRENGTH 0.45
 #define SUNLIGHT_INTENSITY 2
 
 uniform mat4 gbufferProjectionInverse;
