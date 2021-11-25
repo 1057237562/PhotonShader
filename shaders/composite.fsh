@@ -40,7 +40,7 @@ varying vec3 lightPosition;
 varying float extShadow;
 varying float isNight;
 
-const float sunPathRotation =- 25.0;
+const float sunPathRotation = -25.0;
 const int shadowMapResolution = 2048;
 const int noiseTextureResolution = 128;
 const bool shadowHardwareFiltering = true;
@@ -87,8 +87,7 @@ vec4 getBloomSource(vec4 color, vec4 positionInWorldCoord, float IsNight, float 
     return bloom;
 }
 
-vec4 getShadow(vec4 color, vec4 positionInWorldCoord, vec3 normal) {
-    float dis = length(positionInWorldCoord.xyz) / far;
+vec4 getShadow(vec4 color, vec4 positionInWorldCoord, vec3 normal, float dis) {
     float shade = 0;
     vec3 shadowColor = vec3(0);
     // Minecraft to sun coord
@@ -137,153 +136,127 @@ vec3 normalDecode(vec2 enc) {
     return normal;
 }
 
-vec2 getScreenCoordByViewCoord(vec3 viewCoord) {
-    vec4 p = vec4(viewCoord, 1.0);
-    p = gbufferProjection * p;
-    p /= p.w;
-    if (p.z <- 1||p.z > 1)
-    return vec2(-1.0);
-    p = p*0.5f + 0.5f;
-    return p.st;
-}
-
-float linearizeDepth(float depth) {
-    return (2.0 * near) / (far + near - depth * (far - near));
-}
-
-float getLinearDepthOfViewCoord(vec3 viewCoord) {
-    vec4 p = vec4(viewCoord, 1.0);
-    p = gbufferProjection * p;
-    p /= p.w;
-    return linearizeDepth(p.z * 0.5 + 0.5);
-}
-
-/*
-*  @function getWave           : 绘制水面纹理
-*  @param positionInWorldCoord : 世界坐标（绝对坐标）
-*  @return                     : 纹理亮暗系数
-*/
 float getWave(vec4 positionInWorldCoord) {
     
-    float speed1 = float(frameCounter*.3) / (noiseTextureResolution * 15);
+    float speed1 = float(frameCounter * 0.3) / (noiseTextureResolution * 15);
     vec3 coord1 = positionInWorldCoord.xyz / noiseTextureResolution;
     coord1.x *= 3;
     coord1.x += speed1;
     coord1.z += speed1 * 0.2;
     float noise1 = texture2D(noisetex, coord1.xz).x;
     
-    float speed2 = float(frameCounter*0.3) / (noiseTextureResolution * 7);
+    float speed2 = float(frameCounter * 0.3) / (noiseTextureResolution * 7);
     vec3 coord2 = positionInWorldCoord.xyz / noiseTextureResolution;
     coord2.x *= 0.5;
-    coord2.x -= speed2 * 0.15 + noise1 * 0.05;  // 加入第一个波浪的噪声
+    coord2.x -= speed2 * 0.15 + noise1 * 0.05; // 加入第一个波浪的噪声
     coord2.z -= speed2 * 0.7 - noise1 * 0.05;
     float noise2 = texture2D(noisetex, coord2.xz).x;
     
     return noise2 * 0.6 + 0.4;
 }
 
-vec3 convertScreenSpaceToWorldSpace(vec2 co){
-    vec4 fragposition=gbufferProjectionInverse*vec4(vec3(co,texture2DLod(depthtex0,co,0).x)*2.-1.,1.);
-    fragposition/=fragposition.w;
+vec3 convertScreenSpaceToWorldSpace(vec2 co) {
+    vec4 fragposition = gbufferProjectionInverse * vec4(vec3(co, texture2DLod(depthtex0, co, 0).x) * 2.0 - 1.0, 1.0);
+    fragposition /= fragposition.w;
     return fragposition.xyz;
 }
 
-vec3 convertCameraSpaceToScreenSpace(vec3 cameraSpace){
-    vec4 clipSpace=gbufferProjection*vec4(cameraSpace,1.);
-    vec3 NDCSpace=clipSpace.xyz/clipSpace.w;
-    vec3 screenSpace=.5*NDCSpace+.5;
-    screenSpace.z=.1f;
+vec3 convertCameraSpaceToScreenSpace(vec3 cameraSpace) {
+    vec4 clipSpace = gbufferProjection * vec4(cameraSpace, 1.0);
+    vec3 NDCSpace = clipSpace.xyz / clipSpace.w;
+    vec3 screenSpace = 0.5 * NDCSpace + 0.5;
+    screenSpace.z = 0.1f;
     return screenSpace;
 }
 
-vec4 ComputeRaytraceReflection(vec3 normal,bool edgeClamping)
+vec4 ComputeRaytraceReflection(vec3 normal, bool edgeClamping)
 {
-    float initialStepAmount=1.-clamp(.1f/100.,0.,.99);
+    float initialStepAmount = 1.0 - clamp(0.1f / 100.0, 0.0, 0.99);
     
-    vec2 screenSpacePosition2D=texcoord.st;
-    vec3 cameraSpacePosition=convertScreenSpaceToWorldSpace(screenSpacePosition2D);
+    vec2 screenSpacePosition2D = texcoord.st;
+    vec3 cameraSpacePosition = convertScreenSpaceToWorldSpace(screenSpacePosition2D);
     
     //vec3 cameraSpaceNormal = normalize(normal + (rand(texcoord.st + sin(frameTimeCounter)).xyz * 2.0 - 1.0) * 0.05);
-    vec3 cameraSpaceNormal=normal;
+    vec3 cameraSpaceNormal = normal;
     
-    vec3 cameraSpaceViewDir=normalize(cameraSpacePosition);
-    vec3 cameraSpaceVector=initialStepAmount*normalize(reflect(cameraSpaceViewDir,cameraSpaceNormal));
-    vec3 cameraSpaceVectorFar=far*normalize(reflect(cameraSpaceViewDir,cameraSpaceNormal));
-    vec3 oldPosition=cameraSpacePosition;
-    vec3 cameraSpaceVectorPosition=oldPosition+cameraSpaceVector;
-    vec3 currentPosition=convertCameraSpaceToScreenSpace(cameraSpaceVectorPosition);
+    vec3 cameraSpaceViewDir = normalize(cameraSpacePosition);
+    vec3 cameraSpaceVector = initialStepAmount * normalize(reflect(cameraSpaceViewDir, cameraSpaceNormal));
+    vec3 cameraSpaceVectorFar = far * normalize(reflect(cameraSpaceViewDir, cameraSpaceNormal));
+    vec3 oldPosition = cameraSpacePosition;
+    vec3 cameraSpaceVectorPosition = oldPosition + cameraSpaceVector;
+    vec3 currentPosition = convertCameraSpaceToScreenSpace(cameraSpaceVectorPosition);
     
-    const int maxRefinements=5;
-    int numRefinements=0;
-    int count=0;
-    vec2 finalSamplePos=vec2(0.f);
+    const int maxRefinements = 5;
+    int numRefinements = 0;
+    int count = 0;
+    vec2 finalSamplePos = vec2(0.f);
     
-    int numSteps=0;
+    int numSteps = 0;
     
-    float finalSampleDepth=0.;
+    float finalSampleDepth = 0.0;
     
-    for(int i=0;i<40;i++)
+    for(int i = 0; i < 40; i ++ )
     {
-        if(
+        if (
             
-            -cameraSpaceVectorPosition.z>far*1.4f||
-        -cameraSpaceVectorPosition.z<0.f)
+            - cameraSpaceVectorPosition.z > far * 1.4f||
+        - cameraSpaceVectorPosition.z < 0.f)
         {
             break;
         }
         
-        vec2 samplePos=currentPosition.xy;
-        float sampleDepth=convertScreenSpaceToWorldSpace(samplePos).z;
+        vec2 samplePos = currentPosition.xy;
+        float sampleDepth = convertScreenSpaceToWorldSpace(samplePos).z;
         
-        float currentDepth=cameraSpaceVectorPosition.z;
-        float diff=sampleDepth-currentDepth;
-        float error=length(cameraSpaceVector/pow(2.f,numRefinements));
+        float currentDepth = cameraSpaceVectorPosition.z;
+        float diff = sampleDepth - currentDepth;
+        float error = length(cameraSpaceVector / pow(2.f, numRefinements));
         
         //If a collision was detected, refine raymarch
-        if(diff>=0&&diff<=error*2.f&&numRefinements<=maxRefinements)
+        if (diff >= 0&&diff <= error * 2.f&&numRefinements <= maxRefinements)
         {
             //Step back
-            cameraSpaceVectorPosition-=cameraSpaceVector/pow(2.f,numRefinements);
-            ++numRefinements;
+            cameraSpaceVectorPosition -= cameraSpaceVector / pow(2.f, numRefinements);
+            ++ numRefinements;
             //If refinements run out
         }
-        else if(diff>=0&&diff<=error*4.f&&numRefinements>maxRefinements)
+        else if (diff >= 0&&diff <= error * 4.f&&numRefinements > maxRefinements)
         {
-            finalSamplePos=samplePos;
-            finalSampleDepth=sampleDepth;
+            finalSamplePos = samplePos;
+            finalSampleDepth = sampleDepth;
             break;
         }
         
-        cameraSpaceVectorPosition+=cameraSpaceVector/pow(2.f,numRefinements);
+        cameraSpaceVectorPosition += cameraSpaceVector / pow(2.f, numRefinements);
         
-        if(numSteps>1)
-        cameraSpaceVector*=1.375f;//Each step gets bigger
+        if (numSteps > 1)
+        cameraSpaceVector *= 1.375f; //Each step gets bigger
         
-        currentPosition=convertCameraSpaceToScreenSpace(cameraSpaceVectorPosition);
+        currentPosition = convertCameraSpaceToScreenSpace(cameraSpaceVectorPosition);
         
-        if(edgeClamping)
+        if (edgeClamping)
         {
-            currentPosition=clamp(currentPosition,vec3(.001),vec3(.999));
+            currentPosition = clamp(currentPosition, vec3(0.001), vec3(0.999));
         }
         else
         {
-            if(currentPosition.x<0||currentPosition.x>1||
-                currentPosition.y<0||currentPosition.y>1||
-            currentPosition.z<0||currentPosition.z>1)
+            if (currentPosition.x < 0||currentPosition.x > 1||
+                currentPosition.y < 0||currentPosition.y > 1||
+            currentPosition.z < 0||currentPosition.z > 1)
             {
                 break;
             }
         }
         
-        count++;
-        numSteps++;
+        count ++ ;
+        numSteps ++ ;
     }
     
-    vec4 color=vec4(1.);
-    color.rgb=pow(texture2DLod(texture,finalSamplePos,0).rgb,vec3(2.2f));
+    vec4 color = vec4(1.0);
+    color.rgb = pow(texture2DLod(texture, finalSamplePos, 0).rgb, vec3(2.2f));
     
-    if(finalSamplePos.x==0.f||finalSamplePos.y==0.f){
-        color.a=0.f;
+    if (finalSamplePos.x == 0.f||finalSamplePos.y == 0.f) {
+        color.a = 0.f;
     }
     
     //if (-finalSampleDepth >= far * 0.5)
@@ -295,38 +268,38 @@ vec4 ComputeRaytraceReflection(vec3 normal,bool edgeClamping)
     return color;
 }
 
-vec3 Reflection(vec3 color,vec3 viewPos,vec3 normal){
-    vec3 viewRefRay=reflect(normalize(viewPos),normal);
-    float fresnel=.02+.98*pow(1.-dot(viewRefRay,normal),3.);
-    vec4 reflectColor = ComputeRaytraceReflection(normal,false);
+vec3 Reflection(vec3 color, vec3 viewPos, vec3 normal) {
+    vec3 viewRefRay = reflect(normalize(viewPos), normal);
+    float fresnel = 0.02 + 0.98 * pow(1.0 - dot(viewRefRay, normal), 3.0);
+    vec4 reflectColor = ComputeRaytraceReflection(normal, false);
     
     //reflectColor.a = clamp(1.0 - pow(distance(uv, vec2(0.5)) * 2.0, 2.0), 0.0, 1.0);
-    color=mix(color,reflectColor.rgb,reflectColor.a*fresnel);
+    color = mix(color, reflectColor.rgb, reflectColor.a * fresnel);
     return color;
 }
 
-vec3 drawWater(vec3 color,vec4 positionInWorldCoord,vec4 positionInViewCoord,vec3 viewPos,vec3 normal){
-    positionInWorldCoord.xyz+=cameraPosition;// 转为世界坐标（绝对坐标）
+vec3 drawWater(vec3 color, vec4 positionInWorldCoord, vec4 positionInViewCoord, vec3 viewPos, vec3 normal) {
+    positionInWorldCoord.xyz += cameraPosition; // 转为世界坐标（绝对坐标）
     
     // 波浪系数
-    float wave=getWave(positionInWorldCoord);
-    vec3 finalColor=color;
-    finalColor*=wave;// 波浪纹理
+    float wave = getWave(positionInWorldCoord);
+    vec3 finalColor = color;
+    finalColor *= wave; // 波浪纹理
     
     // 透射
-    float cosine=dot(normalize(positionInViewCoord.xyz),normalize(normal));// 计算视线和法线夹角余弦值
-    cosine=clamp(abs(cosine),0,1);
-    float factor=pow(1.-cosine,4);// 透射系数
-    finalColor=mix(color,finalColor,factor);// 透射计算
+    float cosine = dot(normalize(positionInViewCoord.xyz), normalize(normal)); // 计算视线和法线夹角余弦值
+    cosine = clamp(abs(cosine), 0, 1);
+    float factor = pow(1.0 - cosine, 4); // 透射系数
+    finalColor = mix(color, finalColor, factor); // 透射计算
     
     // 按照波浪对法线进行偏移
-    vec3 newNormal=normal;
-    newNormal.z+=.05*(((wave-.4)/.6)*2-1);
-    newNormal=normalize(newNormal);
+    vec3 newNormal = normal;
+    newNormal.z += 0.05 * (((wave - 0.4) / 0.6) * 2-1);
+    newNormal = normalize(newNormal);
     
     //finalColor.rgb*=CalculateWaterCaustics(positionInViewCoord,newNormal)*0.5;
     
-    finalColor.rgb=Reflection(finalColor.rgb,viewPos,newNormal);
+    finalColor.rgb = Reflection(finalColor.rgb, viewPos, newNormal);
     
     return finalColor;
 }
@@ -362,34 +335,37 @@ void main() {
     vec4 positionInViewCoord1 = vec4(positionInClipCoord1.xyz / positionInClipCoord1.w, 1.0);
     vec4 positionInWorldCoord1 = gbufferModelViewInverse * (positionInViewCoord1 + vec4(normal * 0.05 * sqrt(abs(positionInViewCoord1.z)), 0.0));
     
-    gl_FragData[1] = getBloomSource(color, positionInWorldCoord1, isNight, type); //getBloomSource(color);
+    float dis = length(positionInWorldCoord1.xyz) / far;
     
-    if (isLightSource(floor(texture2D(colortex3, texcoord.st).x * 255.f + 0.1)) < 1.0||type == 1.0) {
-        
-        color *= 1-isNight * 0.4;
-        
-        if (transparency > 0.0||type == 1.0) {
-            transparency = max(transparency, type);
-            //float underWaterFadeOut = getUnderWaterFadeOut(depth0, depth1, positionInViewCoord0, normal);
-            if (angle <= 0.1&&extShadow == 0.0) {
-                color = mix(color, color * SHADOW_STRENGTH, transparency);
-            }else {
-                if (angle < 0.2) {
-                    color = mix(color, mix(getShadow(color, positionInWorldCoord1, normal), color * SHADOW_STRENGTH, max(extShadow, 1 - (angle - 0.1) * 10)), transparency);
+    gl_FragData[1] = getBloomSource(color, positionInWorldCoord1, isNight, type); //getBloomSource(color);
+    if (dis < 1) {
+        if (isLightSource(floor(texture2D(colortex3, texcoord.st).x * 255.f + 0.1)) < 1.0||type == 1.0) {
+            
+            color *= 1-isNight * 0.4;
+            
+            if (transparency > 0.0||type == 1.0) {
+                transparency = max(transparency, type);
+                //float underWaterFadeOut = getUnderWaterFadeOut(depth0, depth1, positionInViewCoord0, normal);
+                if (angle <= 0.1&&extShadow == 0.0) {
+                    color = mix(color, color * SHADOW_STRENGTH, transparency);
                 }else {
-                    color = mix(color, mix(getShadow(color, positionInWorldCoord1, normal), color * SHADOW_STRENGTH, extShadow), transparency);
+                    if (angle < 0.2) {
+                        color = mix(color, mix(getShadow(color, positionInWorldCoord1, normal, dis), color * SHADOW_STRENGTH, max(extShadow, 1 - (angle - 0.1) * 10)), transparency);
+                    }else {
+                        color = mix(color, mix(getShadow(color, positionInWorldCoord1, normal, dis), color * SHADOW_STRENGTH, extShadow), transparency);
+                    }
                 }
             }
         }
-    }
-    if (type != 1.0)
-    if (attr == 0.0) {
-        color.rgb = drawWater(color.rgb, positionInWorldCoord0, positionInViewCoord0, positionInClipCoord0.xyz, (texture2D(colortex4, texcoord.st).rgb - 0.5) * 2);
-    }else {
-        if (matId == 41.0 || matId == 42.0 || matId == 57.0 || matId == 71.0 || matId == 20.0 || matId == 95.0 || matId == 102.0 || matId == 160.0 || matId == 90.0 || matId == 133.0) {
-            color.rgb = Reflection(color.rgb, positionInClipCoord0.xyz, normal);
+        if (type != 1.0)
+        if (attr == 0.0) {
+            color.rgb = drawWater(color.rgb, positionInWorldCoord0, positionInViewCoord0, positionInClipCoord0.xyz, (texture2D(colortex4, texcoord.st).rgb - 0.5) * 2);
         }else {
-            color.rgb = mix(color.rgb, Reflection(color.rgb, positionInClipCoord0.xyz, normal), pow(wetness, 2));
+            if (matId == 41.0 || matId == 42.0 || matId == 57.0 || matId == 71.0 || matId == 20.0 || matId == 95.0 || matId == 102.0 || matId == 160.0 || matId == 90.0 || matId == 133.0 || matId == 79.0) {
+                color.rgb = Reflection(color.rgb, positionInClipCoord0.xyz, normal);
+            }else {
+                color.rgb = mix(color.rgb, Reflection(color.rgb, positionInClipCoord0.xyz, normal), pow(wetness, 2));
+            }
         }
     }
     
