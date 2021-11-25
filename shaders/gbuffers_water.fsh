@@ -20,12 +20,8 @@ varying vec4 position;
 varying float attr;
 
 vec2 normalEncode(vec3 n) {
-    if (n.x <= 0.01&&n.y <= 0.01) {
-        return vec2(0.5);
-    }
-    vec2 enc = normalize(n.xy) * (sqrt(-n.z * 0.5 + 0.5));
-    enc = enc * 0.5 + 0.5;
-    return enc;
+    float p = sqrt(normal.z * 8.0 + 8.0);
+    return vec2(normal.xy / p + 0.5);
 }
 
 /*vec3 getWave(vec3 color, vec4 positionInWorldCoord) {
@@ -50,7 +46,7 @@ vec2 normalEncode(vec3 n) {
     return color;
 }*/
 
-/* DRAWBUFFERS:0215 */
+/* DRAWBUFFERS:0214 */
 
 void main() {
     vec4 positionInWorldCoord = gbufferModelViewInverse * position;   // “我的世界坐标”
@@ -84,7 +80,7 @@ void main() {
         float factor = pow(1.0 - cosine, 4);    // 透射系数
         gl_FragData[0] = vec4(blockColor.rgb, factor*0.80 + 0.15);
         gl_FragData[2]=vec4(1-attr,normalEncode(normal),1);
-        gl_FragData[3] = vec4(normal,1);
+        gl_FragData[3]=vec4(normal*0.5+0.5,1);
     }else{
         gl_FragData[0] = blockColor;
         gl_FragData[1] = vec4(normalEncode(normal),max(0,attr-lm*0.6f),1.0);

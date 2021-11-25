@@ -23,7 +23,10 @@ uniform sampler2D gnormal;
 uniform sampler2D shadowtex1;
 uniform sampler2D colortex3;
 uniform sampler2D colortex1;
-uniform sampler2D colortex5;
+uniform sampler2D colortex4;
+uniform float wetness;
+uniform float rainStrength;
+uniform int isEyeInWater;
 uniform vec3 cameraPosition;
 uniform int frameCounter;
 
@@ -33,6 +36,7 @@ uniform float viewWidth;
 uniform sampler2D texture;
 
 varying vec4 texcoord;
+varying vec3 lightPosition;
 varying float extShadow;
 varying float isNight;
 
@@ -41,6 +45,9 @@ const int shadowMapResolution = 2048;
 const int noiseTextureResolution = 128;
 const bool shadowHardwareFiltering = true;
 const float PI = 3.14159265359;
+const int RGBA16 = 0;
+const int colortex4Format = RGBA16;
+const int gnormalFormat = RGBA16;
 
 vec2 getFishEyeCoord(vec2 positionInNdcCoord) {
     return positionInNdcCoord / (1 + SHADOW_MAP_BIAS * (length(positionInNdcCoord.xy) - 1));
@@ -119,11 +126,13 @@ vec4 getShadow(vec4 color, vec4 positionInWorldCoord, vec3 normal) {
 }
 
 vec3 normalDecode(vec2 enc) {
-    vec4 nn = vec4(2.0 * enc - 1.0, 1.0, - 1.0);
-    float l = dot(nn.xyz, - nn.xyw);
-    nn.z = l;
-    nn.xy *= sqrt(l);
-    return nn.xyz * 2.0 + vec3(0.0, 0.0, - 1.0);
+    vec2 fenc = enc * 4.0 - 2.0;
+    float f = dot(fenc, fenc);
+    float g = sqrt(1.0 - f / 4.0);
+    vec3 normal;
+    normal.xy = fenc * g;
+    normal.z = 1.0 - f / 2.0;
+    return normal;
 }
 
 vec2 getScreenCoordByViewCoord(vec3 viewCoord) {
@@ -284,10 +293,12 @@ vec4 ComputeRaytraceReflection(vec3 normal,bool edgeClamping)
     return color;
 }
 
-vec3 waterReflection(vec3 color,vec2 uv,vec3 viewPos,vec3 normal){
+vec3 Reflection(vec3 color,vec3 viewPos,vec3 normal){
     vec3 viewRefRay=reflect(normalize(viewPos),normal);
     float fresnel=.02+.98*pow(1.-dot(viewRefRay,normal),3.);
     vec4 reflectColor = ComputeRaytraceReflection(normal,false);
+    
+    //reflectColor.a = clamp(1.0 - pow(distance(uv, vec2(0.5)) * 2.0, 2.0), 0.0, 1.0);
     color=mix(color,reflectColor.rgb,reflectColor.a*fresnel);
     return color;
 }
@@ -311,16 +322,18 @@ vec3 drawWater(vec3 color,vec4 positionInWorldCoord,vec4 positionInViewCoord,vec
     newNormal.z+=.05*(((wave-.4)/.6)*2-1);
     newNormal=normalize(newNormal);
     
-    finalColor.rgb=waterReflection(finalColor.rgb,texcoord.st,viewPos,newNormal);
+    //finalColor.rgb*=CalculateWaterCaustics(positionInViewCoord,newNormal)*0.5;
+    
+    finalColor.rgb=Reflection(finalColor.rgb,viewPos,newNormal);
     
     return finalColor;
 }
-
 
 /* DRAWBUFFERS:01 */
 void main() {
     
     float type = texture2D(colortex3, texcoord.st).w;
+    float matId = floor(texture2D(colortex3, texcoord.st).x * 255 + 0.1);
     float attr = texture2D(colortex1, texcoord.st).x;
     
     vec3 normal = normalDecode(texture2D(gnormal, texcoord.st).rg);
@@ -367,11 +380,18 @@ void main() {
             }
         }
     }
+    if (type != 1.0)
     if (attr == 0.0) {
-        color.rgb = drawWater(color.rgb, positionInWorldCoord0, positionInViewCoord0, positionInClipCoord0.xyz, texture2D(colortex5, texcoord.st).rgb);
+        color.rgb = drawWater(color.rgb, positionInWorldCoord0, positionInViewCoord0, positionInClipCoord0.xyz, (texture2D(colortex4, texcoord.st).rgb - 0.5) * 2);
+    }else {
+        if (matId == 41.0 || matId == 42.0 || matId == 57.0 || matId == 71.0 || matId == 20.0 || matId == 95.0 || matId == 102.0 || matId == 160.0 || matId == 90.0 || matId == 133.0) {
+            color.rgb = Reflection(color.rgb, positionInClipCoord0.xyz, normal);
+        }else {
+            color.rgb = mix(color.rgb, Reflection(color.rgb, positionInClipCoord0.xyz, normal), max(wetness, rainStrength));
+        }
     }
     
     //gl_FragData[0] = vec4(vec3(transparency),1.0);
-    gl_FragData[0] = color; //vec4(attr,0,0,1);//vec4(normal,1.);//vec4(normalDecode(texture2D(colortex3,texcoord.st).rg),1.);// Problem From normals
+    gl_FragData[0] = color; //vec4(DecodeNormal(texture2D(colortex1, texcoord.st).yz), 1.0); //color; //vec4(attr,0,0,1);//vec4(normal,1.);//vec4(normalDecode(texture2D(colortex3,texcoord.st).rg),1.);// Problem From normals
     
 }
