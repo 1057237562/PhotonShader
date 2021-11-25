@@ -48,6 +48,8 @@ const float PI = 3.14159265359;
 const int RGBA16 = 0;
 const int colortex4Format = RGBA16;
 const int gnormalFormat = RGBA16;
+const float wetnessHalflife = 250.0f;
+const float drynessHalflife = 150.0f;
 
 vec2 getFishEyeCoord(vec2 positionInNdcCoord) {
     return positionInNdcCoord / (1 + SHADOW_MAP_BIAS * (length(positionInNdcCoord.xy) - 1));
@@ -370,13 +372,13 @@ void main() {
             transparency = max(transparency, type);
             //float underWaterFadeOut = getUnderWaterFadeOut(depth0, depth1, positionInViewCoord0, normal);
             if (angle <= 0.1&&extShadow == 0.0) {
-                if (angle <= 0) {
-                    color = mix(color, color * SHADOW_STRENGTH, transparency);
-                }else {
-                    color = mix(color, color * SHADOW_STRENGTH, min(transparency, 1 - angle * 10));
-                }
+                color = mix(color, color * SHADOW_STRENGTH, transparency);
             }else {
-                color = mix(color, mix(getShadow(color, positionInWorldCoord1, normal), color * SHADOW_STRENGTH, extShadow), transparency);
+                if (angle < 0.2) {
+                    color = mix(color, mix(getShadow(color, positionInWorldCoord1, normal), color * SHADOW_STRENGTH, max(extShadow, 1 - (angle - 0.1) * 10)), transparency);
+                }else {
+                    color = mix(color, mix(getShadow(color, positionInWorldCoord1, normal), color * SHADOW_STRENGTH, extShadow), transparency);
+                }
             }
         }
     }
@@ -387,7 +389,7 @@ void main() {
         if (matId == 41.0 || matId == 42.0 || matId == 57.0 || matId == 71.0 || matId == 20.0 || matId == 95.0 || matId == 102.0 || matId == 160.0 || matId == 90.0 || matId == 133.0) {
             color.rgb = Reflection(color.rgb, positionInClipCoord0.xyz, normal);
         }else {
-            color.rgb = mix(color.rgb, Reflection(color.rgb, positionInClipCoord0.xyz, normal), max(wetness, rainStrength));
+            color.rgb = mix(color.rgb, Reflection(color.rgb, positionInClipCoord0.xyz, normal), pow(wetness, 2));
         }
     }
     
