@@ -89,7 +89,7 @@ vec4 getBloomSource(vec4 color, vec4 positionInWorldCoord, float IsNight, float 
     float id = floor(texture2D(colortex3, texcoord.st).x * 255 + 0.1);
     float brightness = dot(bloom.rgb, vec3(0.2125, 0.7154, 0.0721));
     if (type == 1.0) {
-        bloom.rgb *= 0.1;
+        bloom.rgb *= 0.1 * (1 - IsNight);
     }else if (id == 50.0||id == 76.0) {// torch
         if (brightness < 0.5) {
             bloom.rgb = vec3(0);
@@ -99,7 +99,7 @@ vec4 getBloomSource(vec4 color, vec4 positionInWorldCoord, float IsNight, float 
         bloom.rgb *= 6*vec3(1, 0.5, 0.5) * (1 + IsNight * 0.35);
     }
     else {
-        bloom.rgb *= 0.1;
+        bloom.rgb *= 0.1 * (1 - IsNight);
     }
     return bloom;
 }
@@ -393,7 +393,7 @@ void main() {
         
         if (isLightSource(floor(texture2D(colortex3, texcoord.st).x * 255.f + 0.1)) < 1.0||type == 1.0) {
             
-            color *= 1-isNight * 0.4;
+            color *= 1-isNight * 0.8;
             
             if (transparency > 0.0||type == 1.0) {
                 transparency = max(transparency, type);
@@ -419,7 +419,7 @@ void main() {
             color.rgb *= 1.0 + getCaustics(positionInWorldCoord1) * 0.25 * (1 - underWaterFadeOut);
             color.rgb = drawWater(color.rgb, positionInWorldCoord0, positionInViewCoord0, positionInClipCoord0.xyz, (texture2D(colortex4, texcoord.st).rgb - 0.5) * 2);
         }else {
-            if (matId == 41.0 || matId == 42.0 || matId == 57.0 || matId == 71.0 || matId == 20.0 || matId == 95.0 || matId == 102.0 || matId == 160.0 || matId == 90.0 || matId == 133.0 || matId == 79.0) {
+            if (matId == 41.0 || matId == 42.0 || matId == 20.0 || matId == 57.0 || matId == 71.0 || matId == 95.0 || matId == 102.0 || matId == 160.0 || matId == 90.0 || matId == 133.0 || matId == 79.0) {
                 color.rgb = Reflection(color.rgb, positionInClipCoord0.xyz, normal);
             }else {
                 color.rgb = mix(color.rgb, Reflection(color.rgb, positionInClipCoord0.xyz, normal), pow(wetness, 2));
@@ -428,6 +428,6 @@ void main() {
     }
     
     //gl_FragData[0] = vec4(vec3(transparency),1.0);
-    gl_FragData[0] = color; //vec4(vec3(abs(positionInViewCoord0 - positionInViewCoord1)), 1); //vec4(DecodeNormal(texture2D(colortex1, texcoord.st).yz), 1.0); //color; //vec4(attr,0,0,1);//vec4(normal,1.);//vec4(normalDecode(texture2D(colortex3,texcoord.st).rg),1.);// Problem From normals
-    
+    gl_FragData[0] = color; // Problem From normals
+    //gl_FragData[0] = vec4(normal, 1);
 }

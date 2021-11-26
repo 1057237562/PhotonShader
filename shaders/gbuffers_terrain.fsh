@@ -55,7 +55,7 @@ void main() {
     float lm = lmcoord.x;
     float id = floor(matId + 0.1);
     if (isLightBlock(id) == 0.0) {
-        lm *= 0.4f;
+        lm *= max(0.4f, isNight);
     }
     lm += nightVision;
     
@@ -69,7 +69,7 @@ void main() {
     
     gl_FragData[0] = blockColor; //vec4(vec3(dot(normalize(sunPosition),normal)),1.0f);
     if (id == 20.0) {
-        gl_FragData[1] = vec4(normalEncode(normal), 0.0, dot(normalize(sunPosition), normal));
+        gl_FragData[1] = vec4(normalEncode(normal), 0.0, 1.0);
     }else if (worldTime < SUNSET||worldTime > SUNRISE) {
         gl_FragData[1] = vec4(normalEncode(normal), max(0, 1.0 - lm * 0.6f), dot(normalize(sunPosition), normal));
     }else {

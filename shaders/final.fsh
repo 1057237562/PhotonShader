@@ -93,7 +93,7 @@ void main() {
     
     float mixlight = max(float(eyeBrightnessSmooth.x) * 0.8f, float(eyeBrightnessSmooth.y * (1 - isNight))) / 240;
     
-    color.rgb += bloom.rgb * max(pow(mixlight, 2) * 0.3 + isNight * 0.15, 0.1);
+    color.rgb += bloom.rgb * max(pow(mixlight, 3) * 0.3 - isNight * 0.1, 0.1);
     
     color = ConvertToHDR(color);
     // 色调映射
