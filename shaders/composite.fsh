@@ -398,8 +398,8 @@ void main() {
             if (transparency > 0.0||type == 1.0) {
                 transparency = max(transparency, type);
                 //float underWaterFadeOut = getUnderWaterFadeOut(depth0, depth1, positionInViewCoord0, normal);
-                if (angle <= 0.1&&extShadow == 0.0) {
-                    color = mix(color, color * SHADOW_STRENGTH, transparency);
+                if (angle <= 0.1) {
+                    color = mix(color, color * SHADOW_STRENGTH, max(extShadow, transparency));
                 }else {
                     if (angle < 0.2) {
                         color = mix(color, mix(getShadow(color, positionInWorldCoord1, normal, dis), color * SHADOW_STRENGTH, max(max(extShadow, underWaterFadeOut), 1 - (angle - 0.1) * 10)), transparency);
