@@ -32,6 +32,7 @@ uniform int frameCounter;
 
 uniform float viewHeight;
 uniform float viewWidth;
+uniform ivec2 eyeBrightnessSmooth;
 
 uniform sampler2D texture;
 
@@ -65,6 +66,22 @@ float isLightSource(float id) {
         return 1.0;
     }
     return 0.0;
+}
+
+float screenDepthToLinerDepth(float screenDepth) {
+    return 2 * near * far / ((far + near) - screenDepth * (far - near));
+}
+
+float getUnderWaterFadeOut(float d0, float d1, vec4 positionInViewCoord, vec3 normal) {
+    // 转线性深度
+    d0 = screenDepthToLinerDepth(d0);
+    d1 = screenDepthToLinerDepth(d1);
+    
+    // 计算视线和法线夹角余弦值
+    float cosine = dot(normalize(positionInViewCoord.xyz), normalize(normal));
+    cosine = clamp(abs(cosine), 0, 1);
+    
+    return clamp(1.0 - (d1 - d0) * cosine * 0.1, 0, 1);
 }
 
 vec4 getBloomSource(vec4 color, vec4 positionInWorldCoord, float IsNight, float type) {
@@ -304,6 +321,36 @@ vec3 drawWater(vec3 color, vec4 positionInWorldCoord, vec4 positionInViewCoord, 
     return finalColor;
 }
 
+/*
+*  @function getCaustics       : 获取焦散亮度缩放倍数
+*  @param positionInWorldCoord : 当前点在 “我的世界坐标系” 下的坐标
+*  @return                     : 焦散亮暗斑纹的亮度增益
+*/
+float getCaustics(vec4 positionInWorldCoord) {
+    positionInWorldCoord.xyz += cameraPosition; // 转为世界坐标（绝对坐标）
+    
+    // 波纹1
+    float speed1 = float(frameCounter * 0.3) / (noiseTextureResolution * 15);
+    vec3 coord1 = positionInWorldCoord.xyz / noiseTextureResolution;
+    coord1.x *= 4;
+    coord1.x += speed1 * 2 + coord1.z;
+    coord1.z -= speed1;
+    float noise1 = texture2D(noisetex, coord1.xz).x;
+    noise1 = noise1 * 2 - 1.0;
+    
+    // 波纹2
+    float speed2 = float(frameCounter * 0.3) / (noiseTextureResolution * 15);
+    vec3 coord2 = positionInWorldCoord.xyz / noiseTextureResolution;
+    coord2.z *= 4;
+    coord2.z += speed2 * 2 + coord2.x;
+    coord2.x -= speed2;
+    float noise2 = texture2D(noisetex, coord2.xz).x;
+    noise2 = noise2 * 2 - 1.0;
+    
+    return noise1 + noise2; // 叠加
+}
+
+
 /* DRAWBUFFERS:01 */
 void main() {
     
@@ -335,10 +382,15 @@ void main() {
     vec4 positionInViewCoord1 = vec4(positionInClipCoord1.xyz / positionInClipCoord1.w, 1.0);
     vec4 positionInWorldCoord1 = gbufferModelViewInverse * (positionInViewCoord1 + vec4(normal * 0.05 * sqrt(abs(positionInViewCoord1.z)), 0.0));
     
+    float underWaterFadeOut = 1-getUnderWaterFadeOut(depth0, depth1, positionInViewCoord0, normal);
+    
     float dis = length(positionInWorldCoord1.xyz) / far;
     
-    gl_FragData[1] = getBloomSource(color, positionInWorldCoord1, isNight, type); //getBloomSource(color);
+    gl_FragData[1] = getBloomSource(color, positionInWorldCoord1, isNight, type);
+    
+    //getBloomSource(color);
     if (dis < 1) {
+        
         if (isLightSource(floor(texture2D(colortex3, texcoord.st).x * 255.f + 0.1)) < 1.0||type == 1.0) {
             
             color *= 1-isNight * 0.4;
@@ -350,15 +402,21 @@ void main() {
                     color = mix(color, color * SHADOW_STRENGTH, transparency);
                 }else {
                     if (angle < 0.2) {
-                        color = mix(color, mix(getShadow(color, positionInWorldCoord1, normal, dis), color * SHADOW_STRENGTH, max(extShadow, 1 - (angle - 0.1) * 10)), transparency);
+                        color = mix(color, mix(getShadow(color, positionInWorldCoord1, normal, dis), color * SHADOW_STRENGTH, max(max(extShadow, underWaterFadeOut), 1 - (angle - 0.1) * 10)), transparency);
                     }else {
-                        color = mix(color, mix(getShadow(color, positionInWorldCoord1, normal, dis), color * SHADOW_STRENGTH, extShadow), transparency);
+                        color = mix(color, mix(getShadow(color, positionInWorldCoord1, normal, dis), color * SHADOW_STRENGTH, max(extShadow, underWaterFadeOut)), transparency);
                     }
                 }
             }
         }
+        
+        if (isEyeInWater == 1.0 && positionInViewCoord0 == positionInViewCoord1) {
+            color.rgb *= 1.0 + getCaustics(positionInWorldCoord1) * 0.25 * (1 - underWaterFadeOut);
+        }
+        
         if (type != 1.0)
         if (attr == 0.0) {
+            color.rgb *= 1.0 + getCaustics(positionInWorldCoord1) * 0.25 * (1 - underWaterFadeOut);
             color.rgb = drawWater(color.rgb, positionInWorldCoord0, positionInViewCoord0, positionInClipCoord0.xyz, (texture2D(colortex4, texcoord.st).rgb - 0.5) * 2);
         }else {
             if (matId == 41.0 || matId == 42.0 || matId == 57.0 || matId == 71.0 || matId == 20.0 || matId == 95.0 || matId == 102.0 || matId == 160.0 || matId == 90.0 || matId == 133.0 || matId == 79.0) {
@@ -370,6 +428,6 @@ void main() {
     }
     
     //gl_FragData[0] = vec4(vec3(transparency),1.0);
-    gl_FragData[0] = color; //vec4(DecodeNormal(texture2D(colortex1, texcoord.st).yz), 1.0); //color; //vec4(attr,0,0,1);//vec4(normal,1.);//vec4(normalDecode(texture2D(colortex3,texcoord.st).rg),1.);// Problem From normals
+    gl_FragData[0] = color; //vec4(vec3(abs(positionInViewCoord0 - positionInViewCoord1)), 1); //vec4(DecodeNormal(texture2D(colortex1, texcoord.st).yz), 1.0); //color; //vec4(attr,0,0,1);//vec4(normal,1.);//vec4(normalDecode(texture2D(colortex3,texcoord.st).rg),1.);// Problem From normals
     
 }

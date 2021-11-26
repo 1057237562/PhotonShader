@@ -12,35 +12,35 @@ uniform float viewWidth;
 uniform float viewHeight;
 varying float isNight;
 
-void Vignette(inout vec3 color){
-    float dis=distance(texcoord.st,vec2(.5))*2./1.5142f;
+void Vignette(inout vec3 color) {
+    float dis = distance(texcoord.st, vec2(0.5)) * 2.0 / 1.5142f;
     
-    dis=pow(dis,1.1);
-    color.rgb*=min(1.,1.f-dis*.60);
+    dis = pow(dis, 1.1);
+    color.rgb *= min(1.0, 1.f - dis * 0.60);
 }
 
-vec3 ConvertToHDR(in vec3 color){
+vec3 ConvertToHDR(in vec3 color) {
     vec3 HDRImage;
     
-    vec3 overExposed=color*1.15f;
-    vec3 underExposed=color/1.5f;
+    vec3 overExposed = color * 1.15f;
+    vec3 underExposed = color / 1.5f;
     
-    HDRImage=mix(underExposed,overExposed,color);
+    HDRImage = mix(underExposed, overExposed, color);
     
     return HDRImage;
 }
 
-vec4 getScaleInverse(sampler2D src,vec2 pos,vec2 anchor,int fact){
-    return texture2D(src,pos/pow(2,fact)+anchor);
+vec4 getScaleInverse(sampler2D src, vec2 pos, vec2 anchor, int fact) {
+    return texture2D(src, pos / pow(2, fact) + anchor);
 }
 
-vec4 getScaleInverseN(sampler2D src,vec2 pos,vec2 anchor,int fact){
-    return texture2D(src,pos/fact+anchor);
+vec4 getScaleInverseN(sampler2D src, vec2 pos, vec2 anchor, int fact) {
+    return texture2D(src, pos / fact + anchor);
 }
 
-vec3 saturation(vec3 color,float factor){
-    float brightness=dot(color,vec3(.2125,.7154,.0721));
-    return mix(vec3(brightness),color,factor);
+vec3 saturation(vec3 color, float factor) {
+    float brightness = dot(color, vec3(0.2125, 0.7154, 0.0721));
+    return mix(vec3(brightness), color, factor);
 }
 
 /*
@@ -59,7 +59,7 @@ vec3 exposure(vec3 color, float factor,float skylight) {
 *  @param color              : 原颜色
 *  @param adapted_lum        : 亮度调整因子
 *  @return                   : 色调映射之后的值
-*  @explain                  : 感谢知乎大佬：@叛逆者
+*  @explain                  : 感谢知乎大佬@叛逆者
 *                            : 源码地址 https://zhuanlan.zhihu.com/p/21983679
 */
 vec3 ACESToneMapping(vec3 color, float adapted_lum) {
@@ -74,33 +74,33 @@ vec3 ACESToneMapping(vec3 color, float adapted_lum) {
 
 
 /* DRAWBUFFERS:0 */
-void main(){
-    vec3 color=texture2D(gcolor,texcoord.st).rgb;
+void main() {
+    vec3 color = texture2D(gcolor, texcoord.st).rgb;
     
     //vec4 basebloom = getBloomOriginColor(getScaleInverseN(colortex1, texcoord.st, vec2(0.0, 0), 4));
     
-    vec4 bloom=vec4(vec3(0),1);
-    bloom.rgb+=getScaleInverse(colortex1,texcoord.st,vec2(0.,0),2).rgb*pow(7,.25);
-    bloom.rgb+=getScaleInverse(colortex1,texcoord.st,vec2(.3,0),3).rgb*pow(6,.25);
-    bloom.rgb+=getScaleInverse(colortex1,texcoord.st,vec2(.5,0),4).rgb*pow(5,.25);
-    bloom.rgb+=getScaleInverse(colortex1,texcoord.st,vec2(.6,0),5).rgb*pow(4,.25);
-    bloom.rgb+=getScaleInverse(colortex1,texcoord.st,vec2(.7,0),6).rgb*pow(3,.25);
-    bloom.rgb+=getScaleInverse(colortex1,texcoord.st,vec2(.8,0),7).rgb*pow(2,.25);
-    bloom.rgb+=getScaleInverse(colortex1,texcoord.st,vec2(.9,0),8).rgb*pow(1,.25);
-    bloom.rgb=pow(bloom.rgb,vec3(1/2.2));
+    vec4 bloom = vec4(vec3(0), 1);
+    bloom.rgb += getScaleInverse(colortex1, texcoord.st, vec2(0.0, 0), 2).rgb * pow(7, 0.25);
+    bloom.rgb += getScaleInverse(colortex1, texcoord.st, vec2(0.3, 0), 3).rgb * pow(6, 0.25);
+    bloom.rgb += getScaleInverse(colortex1, texcoord.st, vec2(0.5, 0), 4).rgb * pow(5, 0.25);
+    bloom.rgb += getScaleInverse(colortex1, texcoord.st, vec2(0.6, 0), 5).rgb * pow(4, 0.25);
+    bloom.rgb += getScaleInverse(colortex1, texcoord.st, vec2(0.7, 0), 6).rgb * pow(3, 0.25);
+    bloom.rgb += getScaleInverse(colortex1, texcoord.st, vec2(0.8, 0), 7).rgb * pow(2, 0.25);
+    bloom.rgb += getScaleInverse(colortex1, texcoord.st, vec2(0.9, 0), 8).rgb * pow(1, 0.25);
+    bloom.rgb = pow(bloom.rgb, vec3(1 / 2.2));
     
-    float skylight=float(eyeBrightnessSmooth.y*(1-isNight))/240;
+    float skylight = float(eyeBrightnessSmooth.y * (1 - isNight)) / 240;
     
-    float mixlight=max(float(eyeBrightnessSmooth.x)*.8f,float(eyeBrightnessSmooth.y*(1-isNight)))/240;
+    float mixlight = max(float(eyeBrightnessSmooth.x) * 0.8f, float(eyeBrightnessSmooth.y * (1 - isNight))) / 240;
     
-    color.rgb+=bloom.rgb*max(skylight*.3+isNight*.15,.1);
+    color.rgb += bloom.rgb * max(skylight * 0.3 + isNight * 0.15, 0.1);
     
-    color=ConvertToHDR(color);
+    color = ConvertToHDR(color);
     // 色调映射
-    color.rgb=exposure(color.rgb,.65,mixlight);
-    color.rgb=mix(ACESToneMapping(color.rgb,.5)*1.15f,color.rgb,1-mixlight);
-    color.rgb=saturation(color.rgb,1.25f);
+    color.rgb = exposure(color.rgb, 0.5, mixlight);
+    color.rgb = mix(ACESToneMapping(color.rgb, 0.5) * 1.15f, color.rgb, 1 - mixlight);
+    color.rgb = saturation(color.rgb, 1.25f);
     Vignette(color);
     
-    gl_FragData[0]=vec4(color.rgb,1.f);
+    gl_FragData[0] = vec4(color.rgb, 1.f);
 }
