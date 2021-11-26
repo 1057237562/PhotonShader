@@ -97,8 +97,8 @@ void main() {
     
     color = ConvertToHDR(color);
     // 色调映射
-    color.rgb = exposure(color.rgb, 0.65, mixlight);
-    color.rgb = mix(ACESToneMapping(color.rgb, 0.5) * 1.15f, color.rgb, 1 - mixlight);
+    color.rgb = exposure(color.rgb, 0.4, mixlight);
+    color.rgb = mix(ACESToneMapping(color.rgb, 1) * 1.15f, color.rgb, 1 - mixlight);
     color.rgb = saturation(color.rgb, 1.25f);
     Vignette(color);
     

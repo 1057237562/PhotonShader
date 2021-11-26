@@ -32,7 +32,7 @@ void main() {
         isNight = (24000 - worldTime) / 1000.0;
     }
     
-    float lm = lmcoord.x;
+    float lm = lmcoord.x * 0.75 + 0.1;
     lm += nightVision;
     
     float lightSky = lmcoord.y;

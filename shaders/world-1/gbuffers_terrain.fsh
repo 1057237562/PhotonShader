@@ -52,7 +52,7 @@ void main() {
     vec4 positionInViewCoord = vec4(positionInClipCoord.xyz / positionInClipCoord.w, 1.0);
     vec4 positionInWorldCoord = gbufferModelViewInverse * positionInViewCoord;
     
-    float lm = lmcoord.x;
+    float lm = lmcoord.x * 0.75 + 0.1;
     float id = floor(matId + 0.1);
     lm += nightVision;
     
