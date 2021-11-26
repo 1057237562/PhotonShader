@@ -79,7 +79,7 @@ void main() {
         float factor = pow(1.0 - cosine, 4);    // 透射系数
         vec4 blockColor = color;
         blockColor.rgb *= max(lm, lightSky);
-        gl_FragData[0] = vec4(blockColor.rgb, factor*0.80 + 0.15);
+        gl_FragData[0]=vec4(blockColor.rgb, factor*0.75 + 0.15);
         gl_FragData[2]=vec4(1-attr,normalEncode(normal),1);
         gl_FragData[3]=vec4(normal*0.5+0.5,1);
     }else{

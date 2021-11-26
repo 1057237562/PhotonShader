@@ -93,11 +93,11 @@ void main() {
     
     float mixlight = max(float(eyeBrightnessSmooth.x) * 0.8f, float(eyeBrightnessSmooth.y * (1 - isNight))) / 240;
     
-    color.rgb += bloom.rgb * max(skylight * 0.3 + isNight * 0.15, 0.1);
+    color.rgb += bloom.rgb * max(pow(mixlight, 2) * 0.3 + isNight * 0.15, 0.1);
     
     color = ConvertToHDR(color);
     // 色调映射
-    color.rgb = exposure(color.rgb, 0.5, mixlight);
+    color.rgb = exposure(color.rgb, 0.75, mixlight);
     color.rgb = mix(ACESToneMapping(color.rgb, 0.5) * 1.15f, color.rgb, 1 - mixlight);
     color.rgb = saturation(color.rgb, 1.25f);
     Vignette(color);
