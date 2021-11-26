@@ -70,18 +70,21 @@ void main() {
     lightSky = pow(lightSky, 2);
     lightSky *= (1-isNight*0.8);
     
-    vec4 blockColor = texture2D(texture, texcoord.st) * color;
-    blockColor.rgb *= max(lm,lightSky);
+    
     
     if(floor(attr+0.1) == 1.0){
         // 计算视线和法线夹角余弦值
         float cosine = dot(normalize(position.xyz), normalize(normal));
         cosine = clamp(abs(cosine), 0, 1);
         float factor = pow(1.0 - cosine, 4);    // 透射系数
+        vec4 blockColor = color;
+        blockColor.rgb *= max(lm, lightSky);
         gl_FragData[0] = vec4(blockColor.rgb, factor*0.80 + 0.15);
         gl_FragData[2]=vec4(1-attr,normalEncode(normal),1);
         gl_FragData[3]=vec4(normal*0.5+0.5,1);
     }else{
+        vec4 blockColor = texture2D(texture, texcoord.st) * color;
+        blockColor.rgb *= max(lm, lightSky);
         gl_FragData[0] = blockColor;
         gl_FragData[1] = vec4(normalEncode(normal),max(0,attr-lm*0.6f),1.0);
         gl_FragData[2]=vec4(1-attr,normalEncode(normal),1);
