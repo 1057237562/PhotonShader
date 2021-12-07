@@ -393,7 +393,7 @@ void main() {
         
         if (isLightSource(floor(texture2D(colortex3, texcoord.st).x * 255.f + 0.1)) < 1.0||type == 1.0) {
             
-            color *= 1-isNight * 0.8;
+            color *= 1-isNight * 0.6;
             
             if (transparency > 0.0||type == 1.0) {
                 transparency = max(transparency, type);
