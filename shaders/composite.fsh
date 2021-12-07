@@ -399,12 +399,12 @@ void main() {
                 transparency = max(transparency, type);
                 //float underWaterFadeOut = getUnderWaterFadeOut(depth0, depth1, positionInViewCoord0, normal);
                 if (angle <= 0.1) {
-                    color = mix(color, color * SHADOW_STRENGTH, max(extShadow, transparency));
+                    color = mix(color, color * SHADOW_STRENGTH, max(extShadow * 0.4, transparency));
                 }else {
                     if (angle < 0.2) {
-                        color = mix(color, mix(getShadow(color, positionInWorldCoord1, normal, dis), color * SHADOW_STRENGTH, max(max(extShadow, underWaterFadeOut), 1 - (angle - 0.1) * 10)), transparency);
+                        color = mix(color, mix(getShadow(color, positionInWorldCoord1, normal, dis), color * SHADOW_STRENGTH, max(max(extShadow * 0.4, underWaterFadeOut), 1 - (angle - 0.1) * 10)), transparency);
                     }else {
-                        color = mix(color, mix(getShadow(color, positionInWorldCoord1, normal, dis), color * SHADOW_STRENGTH, max(extShadow, underWaterFadeOut)), transparency);
+                        color = mix(color, mix(getShadow(color, positionInWorldCoord1, normal, dis), color * SHADOW_STRENGTH, max(extShadow * 0.4, underWaterFadeOut)), transparency);
                     }
                 }
             }
