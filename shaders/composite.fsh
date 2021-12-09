@@ -6,6 +6,8 @@
 #define ENABLE_WATERREFLECTION
 #define ENABLE_BLOCKREFLECTION
 
+#define BLOOM_EFFECT
+
 uniform mat4 gbufferProjectionInverse;
 uniform mat4 gbufferProjection;
 uniform float far;
@@ -404,8 +406,9 @@ void main() {
     
     float dis = length(positionInWorldCoord1.xyz) / far;
     
+    #ifdef BLOOM_EFFECT
     gl_FragData[1] = getBloomSource(color, positionInWorldCoord1, isNight, type);
-    
+    #endif
     //getBloomSource(color);
     if (dis < 1) {
         

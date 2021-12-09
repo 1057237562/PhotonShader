@@ -1,5 +1,7 @@
 #version 120
 
+#define BLOOM_EFFECT
+
 uniform sampler2D gcolor;
 uniform sampler2D colortex1;
 
@@ -81,7 +83,8 @@ void main() {
     // 传递基色
     vec4 color = texture2D(gcolor, texcoord.st);
     gl_FragData[0] = color;
-
+    
+    #ifdef BLOOM_EFFECT
     // 计算不同分辨率的亮色纹理
     vec4 bloom = vec4(0);
     bloom += getScaleN(gcolor, texcoord.st, vec2(0.0, 0), 4);
@@ -92,4 +95,5 @@ void main() {
     bloom += getScale(colortex1, texcoord.st, vec2(0.8, 0), 7);
     bloom += getScale(colortex1, texcoord.st, vec2(0.9, 0), 8);
     gl_FragData[1] = bloom;
+    #endif
 }

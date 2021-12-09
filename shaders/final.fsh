@@ -1,6 +1,7 @@
 #version 120
 
-#define BLOOM_CONSTANT.5
+#define BLOOM_CONSTANT 0.5
+#define BLOOM_EFFECT
 
 varying vec4 texcoord;
 
@@ -77,8 +78,12 @@ vec3 ACESToneMapping(vec3 color, float adapted_lum) {
 void main() {
     vec3 color = texture2D(gcolor, texcoord.st).rgb;
     
-    //vec4 basebloom = getBloomOriginColor(getScaleInverseN(colortex1, texcoord.st, vec2(0.0, 0), 4));
+    float skylight = float(eyeBrightnessSmooth.y * (1 - isNight)) / 240;
     
+    float mixlight = max(float(eyeBrightnessSmooth.x) * 0.8f, float(eyeBrightnessSmooth.y * (1 - isNight))) / 240;
+    
+    //vec4 basebloom = getBloomOriginColor(getScaleInverseN(colortex1, texcoord.st, vec2(0.0, 0), 4));
+    #ifdef BLOOM_EFFECT
     vec4 bloom = vec4(vec3(0), 1);
     bloom.rgb += getScaleInverse(colortex1, texcoord.st, vec2(0.0, 0), 2).rgb * pow(7, 0.25);
     bloom.rgb += getScaleInverse(colortex1, texcoord.st, vec2(0.3, 0), 3).rgb * pow(6, 0.25);
@@ -88,12 +93,13 @@ void main() {
     bloom.rgb += getScaleInverse(colortex1, texcoord.st, vec2(0.8, 0), 7).rgb * pow(2, 0.25);
     bloom.rgb += getScaleInverse(colortex1, texcoord.st, vec2(0.9, 0), 8).rgb * pow(1, 0.25);
     bloom.rgb = pow(bloom.rgb, vec3(1 / 2.2));
-    
-    float skylight = float(eyeBrightnessSmooth.y * (1 - isNight)) / 240;
-    
-    float mixlight = max(float(eyeBrightnessSmooth.x) * 0.8f, float(eyeBrightnessSmooth.y * (1 - isNight))) / 240;
-    
     color.rgb += bloom.rgb * max(pow(mixlight, 3) * 0.3 - isNight * 0.1, 0.1);
+    #else
+    color.rgb *= 1.5f;
+    color.rgb += vec3(0.15);
+    #endif
+    
+    //color.rgb += bloom.rgb * max(pow(mixlight, 3) * 0.3 - isNight * 0.1, 0.1);
     
     color = ConvertToHDR(color);
     // 色调映射
