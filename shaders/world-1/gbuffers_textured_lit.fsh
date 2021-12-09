@@ -20,17 +20,6 @@ vec2 normalEncode(vec3 n) {
 
 /* DRAWBUFFERS:02 */
 void main() {
-    float isNight = 0;
-    if (12000 < worldTime&&worldTime < 13000) {
-        isNight = 1.0 - (13000 - worldTime) / 1000.0;
-    }
-    else if (13000 <= worldTime&&worldTime <= 23000) {
-        isNight = 1;
-    }
-    else if (23000 < worldTime) {
-        isNight = (24000 - worldTime) / 1000.0;
-    }
-    
     vec4 blockColor = texture2D(texture, texcoord.st) * color;
     blockColor *= texture2D(lightmap, lmcoord.st);
     

@@ -35,17 +35,6 @@ float isLightBlock(float id) {
 /* DRAWBUFFERS:023 */
 void main() {
     
-    float isNight = 0;
-    if (12000 < worldTime&&worldTime < 13000) {
-        isNight = 1.0 - (13000 - worldTime) / 1000.0;
-    }
-    else if (13000 <= worldTime&&worldTime <= 23000) {
-        isNight = 1;
-    }
-    else if (23000 < worldTime) {
-        isNight = (24000 - worldTime) / 1000.0;
-    }
-    
     float depth = texture2D(depthtex1, texcoord.st).x;
     vec4 positionInNdcCoord = vec4(texcoord.st * 2-1, depth * 2-1, 1);
     vec4 positionInClipCoord = gbufferProjectionInverse * positionInNdcCoord;
@@ -58,7 +47,6 @@ void main() {
     
     float lightSky = lmcoord.y;
     lightSky = pow(lightSky, 2);
-    lightSky *= (1 - isNight * 0.8);
     
     vec4 blockColor = texture2D(texture, texcoord.st) * color;
     blockColor.rgb *= max(lm, lightSky);

@@ -14,6 +14,7 @@ uniform float nightVision;
 
 uniform mat4 gbufferModelViewInverse;
 uniform mat4 gbufferProjectionInverse;
+uniform int fogMode;
 varying vec4 color;
 varying vec4 texcoord;
 varying vec3 normal;
@@ -68,6 +69,12 @@ void main() {
     //blockColor += vec4(0.8,1.0,1.0,1.0)*isNight*0.1;
     
     gl_FragData[0] = blockColor; //vec4(vec3(dot(normalize(sunPosition),normal)),1.0f);
+    if (fogMode == 9729) {
+        gl_FragData[0].rgb = mix(gl_Fog.color.rgb, gl_FragData[0].rgb, clamp((gl_Fog.end - gl_FogFragCoord) / (gl_Fog.end - gl_Fog.start), 0.8, 1.0));
+    }else if (fogMode == 2048) {
+        gl_FragData[0].rgb = mix(gl_Fog.color.rgb, gl_FragData[0].rgb, clamp(exp(-gl_FogFragCoord * gl_Fog.density), 0.8, 1.0));
+    }
+    
     if (id == 20.0) {
         gl_FragData[1] = vec4(normalEncode(normal), 0.0, 1.0);
     }else if (worldTime < SUNSET||worldTime > SUNRISE) {

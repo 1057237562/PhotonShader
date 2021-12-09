@@ -27,23 +27,11 @@ vec3 saturation(vec3 color, float factor) {
 
 /* DRAWBUFFERS:023 */
 void main() {
-    float isNight = 0;
-    if (12000 < worldTime&&worldTime < 13000) {
-        isNight = 1.0 - (13000 - worldTime) / 1000.0;
-    }
-    else if (13000 <= worldTime&&worldTime <= 23000) {
-        isNight = 1;
-    }
-    else if (23000 < worldTime) {
-        isNight = (24000 - worldTime) / 1000.0;
-    }
-    
     float lm = lmcoord.x * 0.75 + 0.1;
     lm += nightVision;
     
     float lightSky = lmcoord.y;
     lightSky = pow(lightSky, 2);
-    lightSky *= (1 - isNight * 0.8);
     
     vec4 Screencolor = texture2D(texture, texcoord.st) * color;
     

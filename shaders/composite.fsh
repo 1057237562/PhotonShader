@@ -3,6 +3,8 @@
 #define SHADOW_MAP_BIAS 0.85
 #define SHADOW_STRENGTH 0.45
 #define SUNLIGHT_INTENSITY 2
+#define ENABLE_WATERREFLECTION
+#define ENABLE_BLOCKREFLECTION
 
 uniform mat4 gbufferProjectionInverse;
 uniform mat4 gbufferProjection;
@@ -33,6 +35,7 @@ uniform int frameCounter;
 uniform float viewHeight;
 uniform float viewWidth;
 uniform ivec2 eyeBrightnessSmooth;
+uniform float nightVision;
 
 uniform sampler2D texture;
 
@@ -94,9 +97,9 @@ vec4 getBloomSource(vec4 color, vec4 positionInWorldCoord, float IsNight, float 
         if (brightness < 0.5) {
             bloom.rgb = vec3(0);
         }
-        bloom.rgb *= 7*pow(brightness, 2) * (1 + IsNight * 0.5);
+        bloom.rgb *= 7*pow(brightness, 2) * (1 + IsNight * 0.15);
     }else if (isLightSource(id) == 1.0) {// glowing blocks
-        bloom.rgb *= 6*vec3(1, 0.5, 0.5) * (1 + IsNight * 0.25);
+        bloom.rgb *= 6*vec3(1, 0.5, 0.5) * (1 + IsNight * 0.05);
     }
     else {
         bloom.rgb *= 0.1 * (1 - IsNight);
@@ -315,19 +318,35 @@ vec3 drawWater(vec3 color, vec4 positionInWorldCoord, vec4 positionInViewCoord, 
     newNormal = normalize(newNormal);
     
     //finalColor.rgb*=CalculateWaterCaustics(positionInViewCoord,newNormal)*0.5;
-    
+    #ifdef ENABLE_WATERREFLECTION
     finalColor.rgb = Reflection(finalColor.rgb, viewPos, newNormal);
+    #endif
     
     return finalColor;
 }
 
-/*
-*  @function getCaustics       : 获取焦散亮度缩放倍数
-*  @param positionInWorldCoord : 当前点在 “我的世界坐标系” 下的坐标
-*  @return                     : 焦散亮暗斑纹的亮度增益
-*/
+float GetDepthLinear(in vec2 coord) {
+    //return 2.0f * near * far / (far + near - (2.0f * texture2D(depthtex1, coord).x - 1.0f) * (far - near));
+    return (near * far) / (texture2D(depthtex1, coord).x * (near - far) + far);
+}
+
+void CalculateUnderwaterFog(inout vec3 finalComposite) {
+    vec3 fogColor = vec3(0.2f, 0.5f, 0.95f);
+    // float fogDensity = 0.045f;
+    // float fogFactor = exp(GetDepthLinear(texcoord.st) * fogDensity) - 1.0f;
+    // 	  fogFactor = min(fogFactor, 1.0f);
+    float fogFactor = GetDepthLinear(texcoord.st) / 100.0f;
+    fogFactor = min(fogFactor, 0.7f);
+    fogFactor = sin(fogFactor * 3.1415 / 2.0f);
+    fogFactor = pow(fogFactor, 0.5f);
+    
+    finalComposite.rgb = mix(finalComposite.rgb, fogColor * 0.002f, vec3(fogFactor));
+    finalComposite.rgb *= mix(vec3(1.0f), vec3(0.0016f, 0.0625f, 0.814506f), vec3(fogFactor));
+    //finalComposite.rgb = vec3(0.1f);
+}
+
 float getCaustics(vec4 positionInWorldCoord) {
-    positionInWorldCoord.xyz += cameraPosition; // 转为世界坐标（绝对坐标）
+    positionInWorldCoord.xyz += cameraPosition;
     
     // 波纹1
     float speed1 = float(frameCounter * 0.3) / (noiseTextureResolution * 15);
@@ -349,7 +368,6 @@ float getCaustics(vec4 positionInWorldCoord) {
     
     return noise1 + noise2; // 叠加
 }
-
 
 /* DRAWBUFFERS:01 */
 void main() {
@@ -419,12 +437,18 @@ void main() {
             color.rgb *= 1.0 + getCaustics(positionInWorldCoord1) * 0.25 * (1 - underWaterFadeOut);
             color.rgb = drawWater(color.rgb, positionInWorldCoord0, positionInViewCoord0, positionInClipCoord0.xyz, (texture2D(colortex4, texcoord.st).rgb - 0.5) * 2);
         }else {
+            #ifdef ENABLE_BLOCKREFLECTION
             if (matId == 41.0 || matId == 42.0 || matId == 20.0 || matId == 57.0 || matId == 71.0 || matId == 95.0 || matId == 102.0 || matId == 160.0 || matId == 90.0 || matId == 133.0 || matId == 79.0) {
                 color.rgb = Reflection(color.rgb, positionInClipCoord0.xyz, normal);
             }else {
                 color.rgb = mix(color.rgb, Reflection(color.rgb, positionInClipCoord0.xyz, normal), pow(wetness, 2));
             }
+            #endif
         }
+    }
+    
+    if (isEyeInWater == 1.0 && nightVision == 0.0) {
+        CalculateUnderwaterFog(color.rgb);
     }
     
     //gl_FragData[0] = vec4(vec3(transparency),1.0);
