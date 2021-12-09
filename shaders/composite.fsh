@@ -17,7 +17,11 @@ uniform mat4 shadowModelView;
 uniform mat4 shadowProjection;
 uniform mat4 shadowModelViewInverse;
 uniform mat4 shadowProjectionInverse;
+#ifdef COMPATIABLE
+uniform sampler2D shadow;
+#else
 uniform sampler2DShadow shadow;
+#endif
 uniform sampler2D depthtex0;
 uniform sampler2D depthtex1;
 uniform sampler2D gcolor;
@@ -340,7 +344,7 @@ void CalculateUnderwaterFog(inout vec3 finalComposite) {
     float fogFactor = GetDepthLinear(texcoord.st) / 100.0f;
     fogFactor = min(fogFactor, 0.7f);
     fogFactor = sin(fogFactor * 3.1415 / 2.0f);
-    fogFactor = pow(fogFactor, 0.5f);
+    //fogFactor = pow(fogFactor, 0.5f);
     
     finalComposite.rgb = mix(finalComposite.rgb, fogColor * 0.002f, vec3(fogFactor));
     finalComposite.rgb *= mix(vec3(1.0f), vec3(0.0016f, 0.0625f, 0.814506f), vec3(fogFactor));
