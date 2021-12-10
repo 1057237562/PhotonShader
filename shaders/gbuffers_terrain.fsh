@@ -56,13 +56,13 @@ void main() {
     float lm = lmcoord.x;
     float id = floor(matId + 0.1);
     if (isLightBlock(id) == 0.0) {
-        lm *= max(0.4f, isNight * 0.5);
+        lm *= max(0.4f, isNight * 0.6);
     }
     lm += nightVision;
     
     float lightSky = lmcoord.y;
     lightSky = pow(lightSky, 2);
-    lightSky *= (1 - isNight * 0.8);
+    lightSky *= (1 - isNight * 0.9);
     
     vec4 blockColor = texture2D(texture, texcoord.st) * color;
     blockColor.rgb *= max(lm, lightSky);

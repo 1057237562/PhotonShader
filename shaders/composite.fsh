@@ -7,6 +7,7 @@
 #define ENABLE_BLOCKREFLECTION
 
 #define BLOOM_EFFECT
+#define COLOR_SHADOW
 
 uniform mat4 gbufferProjectionInverse;
 uniform mat4 gbufferProjection;
@@ -101,7 +102,7 @@ vec4 getBloomSource(vec4 color, vec4 positionInWorldCoord, float IsNight, float 
         if (brightness < 0.5) {
             bloom.rgb = vec3(0);
         }
-        bloom.rgb *= 7*pow(brightness, 2) * (1 + IsNight * 0.15);
+        bloom.rgb *= 7*pow(brightness, 2) * (1 + IsNight * 0.1);
     }else if (isLightSource(id) == 1.0) {// glowing blocks
         bloom.rgb *= 6*vec3(1, 0.5, 0.5) * (1 + IsNight * 0.05);
     }
@@ -129,8 +130,7 @@ vec4 getShadow(vec4 color, vec4 positionInWorldCoord, vec3 normal, float dis) {
     
     float dist = sqrt(positionInLightNdcCoord.x * positionInLightNdcCoord.x + positionInLightNdcCoord.y * positionInLightNdcCoord.y);
     
-    float diffthresh = dist * 1.f + 0.10f;
-    diffthresh *= 1f / (shadowMapResolution / 2048.0f);
+    float diffthresh = (dist * 1.f + 0.10f) / (shadowMapResolution / 2048.0f);
     //diffthresh /= shadingStruct.direct + 0.1f;
     for(int i =- 1; i < 2; i ++ ) {
         for(int j =- 1; j < 2; j ++ ) {
@@ -138,13 +138,17 @@ vec4 getShadow(vec4 color, vec4 positionInWorldCoord, vec3 normal, float dis) {
             offset = rot * offset;
             float solidDepth = texture2DLod(shadowtex1, positionInLightScreenCoord.st, 0).x;
             float solidShadow = 1.0 - clamp((positionInLightScreenCoord.z - solidDepth) * 1200.0, 0.0, 1.0);
+            #ifdef COLOR_SHADOW
             shadowColor += texture2DLod(shadowcolor1, positionInLightScreenCoord.xy + offset, 0).rgb * solidShadow;
+            #endif
             shade += shadow2D(shadow, vec3(positionInLightScreenCoord.st + offset, positionInLightScreenCoord.z - 0.0008 * diffthresh)).z * SUNLIGHT_INTENSITY;
         }
     }
     shade *= 0.111;
+    #ifdef COLOR_SHADOW
     shadowColor *= 0.75;
     shadowColor = mix(shadowColor, vec3(0.0), isNight * 0.90); //vec4(shadowColor*0.111,1.0);//
+    #endif
     color = mix(vec4(shadowColor * 0.111, 1.0), color, clamp(shade, clamp(dis * (isNight * 0.4 + 1), SHADOW_STRENGTH, 1), 1));
     return color;
 }
