@@ -17,11 +17,9 @@ uniform mat4 shadowModelView;
 uniform mat4 shadowProjection;
 uniform mat4 shadowModelViewInverse;
 uniform mat4 shadowProjectionInverse;
-#ifdef COMPATIABLE
-uniform sampler2D shadow;
-#else
+
 uniform sampler2DShadow shadow;
-#endif
+
 uniform sampler2D depthtex0;
 uniform sampler2D depthtex1;
 uniform sampler2D gcolor;
@@ -132,9 +130,8 @@ vec4 getShadow(vec4 color, vec4 positionInWorldCoord, vec3 normal, float dis) {
     float dist = sqrt(positionInLightNdcCoord.x * positionInLightNdcCoord.x + positionInLightNdcCoord.y * positionInLightNdcCoord.y);
     
     float diffthresh = dist * 1.f + 0.10f;
-    diffthresh *= 1f / (shadowMapResolution / 2048.f);
+    diffthresh *= 1f / (shadowMapResolution / 2048.0f);
     //diffthresh /= shadingStruct.direct + 0.1f;
-    
     for(int i =- 1; i < 2; i ++ ) {
         for(int j =- 1; j < 2; j ++ ) {
             vec2 offset = vec2(i, j) / shadowMapResolution;
@@ -377,7 +374,6 @@ float getCaustics(vec4 positionInWorldCoord) {
 
 /* DRAWBUFFERS:01 */
 void main() {
-    
     float type = texture2D(colortex3, texcoord.st).w;
     float matId = floor(texture2D(colortex3, texcoord.st).x * 255 + 0.1);
     float attr = texture2D(colortex1, texcoord.st).x;

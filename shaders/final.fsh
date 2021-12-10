@@ -94,14 +94,15 @@ void main() {
     bloom.rgb += getScaleInverse(colortex1, texcoord.st, vec2(0.9, 0), 8).rgb * pow(1, 0.25);
     bloom.rgb = pow(bloom.rgb, vec3(1 / 2.2));
     color.rgb += bloom.rgb * max(pow(mixlight, 3) * 0.3 - isNight * 0.1, 0.1);
+    color = ConvertToHDR(color);
     #else
+    vec3 bloom = color.rgb * 2.7965f;
+    color.rgb += bloom * max(pow(mixlight, 3) * 0.3 - isNight * 0.1, 0.1);
     color.rgb *= 1.5f;
-    color.rgb += vec3(0.15);
     #endif
     
     //color.rgb += bloom.rgb * max(pow(mixlight, 3) * 0.3 - isNight * 0.1, 0.1);
     
-    color = ConvertToHDR(color);
     // 色调映射
     color.rgb = exposure(color.rgb, 0.75, mixlight);
     color.rgb = mix(ACESToneMapping(color.rgb, 0.5) * 1.15f, color.rgb, 1 - mixlight);
