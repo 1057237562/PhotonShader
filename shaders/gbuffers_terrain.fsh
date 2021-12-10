@@ -56,7 +56,7 @@ void main() {
     float lm = lmcoord.x;
     float id = floor(matId + 0.1);
     if (isLightBlock(id) == 0.0) {
-        lm *= max(0.4f, isNight * 0.6);
+        lm *= max(0.6f, isNight * 0.8);
     }
     lm += nightVision;
     

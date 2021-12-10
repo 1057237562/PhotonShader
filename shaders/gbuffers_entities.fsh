@@ -33,7 +33,7 @@ void main() {
     }
     
     float lm = lmcoord.x;
-    lm *= max(0.4f, isNight * 0.6);
+    lm *= max(0.6f, isNight * 0.8);
     lm += nightVision;
     
     float lightSky = lmcoord.y;

@@ -102,7 +102,7 @@ vec4 getBloomSource(vec4 color, vec4 positionInWorldCoord, float IsNight, float 
         if (brightness < 0.5) {
             bloom.rgb = vec3(0);
         }
-        bloom.rgb *= 7*pow(brightness, 2) * (1 + IsNight * 0.1);
+        bloom.rgb *= 7*pow(brightness, 2);
     }else if (isLightSource(id) == 1.0) {// glowing blocks
         bloom.rgb *= 6*vec3(1, 0.5, 0.5) * (1 + IsNight * 0.05);
     }
